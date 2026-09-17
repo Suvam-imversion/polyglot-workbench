@@ -33,7 +33,15 @@ flowchart LR
 
 ## Provider layering
 
-`src/contracts/ai.ts` is the boundary. Vendor roles, system-message placement, tool schemas, stream event types, error bodies, and usage fields exist only in adapter files. `src/server/config/models.ts` is the single provider catalog; `providers/index.ts`, route validation, and UI options derive from it. Adding a provider means one adapter file plus one catalog entry and no other edits.
+`src/contracts/ai.ts` is the boundary. Vendor roles, system-message placement, tool schemas, stream event types, error bodies, and usage fields exist only in adapter files. `src/server/config/models.ts` is the single provider catalog; `providers/index.ts`, route validation, key status, fallback selection, and UI options derive from it.
+
+To add another provider:
+
+1. Add `src/server/ai/providers/<provider>.ts` implementing `AiProvider`. Convert normalized messages/tools into the vendor request and yield normalized stream events.
+2. Add one `providerCatalog` entry with its ID, label, environment-variable name, fallback order, lazy adapter import, models, context limits, capabilities, and prices.
+3. Add a mocked HTTP streaming fixture for the adapter. This is verification, not another production integration point.
+
+No route, orchestrator, persistence, metrics, or UI branching is required. OpenAI-compatible providers can subclass `OpenAiCompatibleProvider`; incompatible APIs remain isolated in their own adapter.
 
 ## Decisions
 
@@ -70,4 +78,6 @@ Known gaps and production additions:
 
 ## With more time
 
-I would first add integration tests against provider sandboxes with recorded fixtures and exact token counting. Second, I would add a small grounded-answer evaluation set and tune hybrid retrieval against it.
+1. Add opt-in integration tests against provider sandboxes, exact pre-request token counting, and account-level spending budgets.
+2. Build a grounded-answer evaluation set and tune BM25/vector fusion and thresholds against measured retrieval quality.
+3. Move long document ingestion to durable background jobs and replace in-process search with a production hybrid-search service.

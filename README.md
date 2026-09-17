@@ -4,15 +4,19 @@ A small full-stack workbench for streaming chat across Anthropic, Gemini, Groq, 
 
 ## Setup (under 5 minutes)
 
-Requirements: Node.js 22+ and at least one provider API key.
+Requirements: Git, Node.js 22+, and at least one provider API key. Set the repository URL from the submission email, then run:
 
 ```powershell
-npm install
+$RepositoryUrl = "https://github.com/OWNER/REPOSITORY.git"
+git clone $RepositoryUrl polyglot-ai-workbench
+Set-Location polyglot-ai-workbench
+npm ci
 Copy-Item .env.example .env.local
+notepad .env.local
 npm run dev
 ```
 
-Add keys to `.env.local`, then open [http://localhost:3000](http://localhost:3000). The sidebar shows which keys are available. SQLite is created automatically at `data/polyglot.db`.
+Add at least one key when Notepad opens, save the file, and open [http://localhost:3000](http://localhost:3000). The sidebar reports which providers are configured. SQLite is created automatically at `data/polyglot.db`.
 
 ```dotenv
 ANTHROPIC_API_KEY=...
@@ -29,7 +33,7 @@ npm run lint
 npm run build
 ```
 
-Or run the complete application in Docker:
+For Docker, replace the final `npm run dev` command above with:
 
 ```powershell
 docker compose up --build
@@ -52,7 +56,7 @@ Compose exposes `http://localhost:3000`, runs as a non-root user, checks `/api/c
 | Resilience | Done | Timeouts; retry with backoff/jitter; configurable provider fallback |
 | Observability | Done | TTFT, latency, token categories, configured cost, retries, fallback |
 | Adapter tests | Done | Mocked streaming HTTP fixtures for all four providers |
-| Live provider verification | Needs keys | Gemini/Groq are the intended live-demo providers; Anthropic/OpenAI remain fixture-tested for reviewer keys |
+| Live provider verification | Partial | Gemini text streaming and a complete calculator tool round were tested with a live key; Anthropic, Groq, and OpenAI use mocked streaming fixtures |
 | Demo video | Not recorded | Use `docs/DEMO_SCRIPT.md` for a 5-8 minute walkthrough |
 | Side-by-side comparison | Not done | Optional; intentionally left out to keep the core easy to repair |
 | Docker Compose | Done | Multi-stage non-root image, health check, persistent SQLite volume |
@@ -95,3 +99,4 @@ The default `EMBEDDING_PROVIDER=local` is a deterministic hashed bag-of-words em
 - Context sizing uses a conservative character estimate and drops oldest turns first.
 - In-flight partial assistant text is not persisted after cancellation.
 - This is a single-user local app; authentication and tenant isolation are production work.
+- Anthropic, Groq, and OpenAI were not called with live keys during development; their adapters are covered by mocked HTTP streams.

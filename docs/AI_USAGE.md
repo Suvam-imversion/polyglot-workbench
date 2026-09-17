@@ -1,19 +1,23 @@
 # AI Usage
 
-Codex was used to read the assignment, research current first-party provider documentation, scaffold the application, draft the initial implementation/tests/docs, and run validation.
+## Tools and scope
 
-Human-review items:
+I used ChatGPT as a coding assistant for requirements breakdown, implementation drafts, provider-documentation research, test-case design, and documentation editing. I used terminal automation to run tests, linting, type checking, production builds, dependency audits, Docker builds, API smoke tests, and live Gemini verification.
 
-- Confirm model access and pricing for the reviewer accounts before recording the demo.
-- Exercise each provider with a live key; the repository currently validates adapters with mocked HTTP streams because no keys are committed.
-- Review the UI copy and record the final demo video.
+AI assistance was used across the provider adapters, streaming orchestrator, tool loop, RAG pipeline, responsive interface, Docker setup, and Markdown documentation. I reviewed the resulting code against the assignment and kept the implementation deliberately small enough to explain and modify during a live session.
 
-Corrections made during AI-assisted work:
+## Corrections and rejected suggestions
 
-- Removed `expr-eval` after `npm audit` reported unfixed code-execution/prototype-pollution advisories; replaced it with a restricted arithmetic parser.
-- Adjusted code for current React lint rules, Next.js route typing, and current PDF.js typings after local validation.
-- Fixed OpenAI streamed tool-call ID tracking so fragments without repeated IDs accumulate correctly.
-- Kept optional side-by-side comparison and Docker out of scope to preserve a smaller, more repairable core.
+- Rejected an expression-evaluation dependency after its audit reported unresolved code-execution and prototype-pollution risks. It was replaced with a restricted recursive-descent arithmetic parser.
+- Reworked the first provider registry because adding a provider still required edits in route and UI maps. Provider discovery, key status, validation, models, and labels now derive from one catalog.
+- Corrected the initial Gemini tool-schema mapping after a live request showed that Gemini rejects `additionalProperties` in function declarations.
+- Corrected Gemini tool history after live requests showed that it rejects OpenAI's `call_id` field and requires its thought signature to be returned unchanged on the next round.
+- Corrected the first Docker build when `better-sqlite3` needed native compilation. Build tools now exist only in the dependency stage and are absent from the runtime image.
+- Rejected side-by-side generation, semantic caching, and an evaluation dashboard for this submission. Hybrid retrieval was chosen as the single substantial optional feature because it is deterministic, testable without paid keys, and easy to explain.
+- Rejected broad refactors and provider SDK wrappers where plain `fetch` made the request and streaming behavior easier to inspect.
 
-No generated claim of live-provider success should be accepted without running it against real keys.
+## Validation and remaining judgment calls
 
+Gemini was tested with a live key for text streaming and a complete calculator tool round. Anthropic, Groq, and OpenAI were validated with mocked streaming HTTP fixtures and were not represented as live-tested. Model prices and access can change, so the configuration records the date checked and keeps those values in one file.
+
+The main areas I would revisit for production are exact token counting, account-level budgets, authentication and tenant isolation, durable ingestion, malware scanning, and retrieval evaluation. These are documented as gaps rather than implied to be complete.
