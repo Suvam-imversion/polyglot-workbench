@@ -68,6 +68,30 @@ function costFor(provider: ProviderId, modelId: string, usage: Usage) {
   ) / 1_000_000;
 }
 
+function persistRequest(record: {
+  requestId: string;
+  conversationId: string;
+  provider: ProviderId;
+  model: string;
+  started: number;
+  firstTokenMs: number | null;
+  totalMs: number;
+  usage: Usage;
+  costUsd: number;
+  finishReason: string;
+  retries: number;
+  fallbackFrom: ProviderId | null;
+}) {
+  db.prepare(`
+    INSERT INTO requests (id, conversation_id, provider, model, started_at, first_token_ms, total_ms, input_tokens, output_tokens, cached_tokens, reasoning_tokens, cost_usd, finish_reason, retry_count, fallback_from)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    record.requestId, record.conversationId, record.provider, record.model, new Date(record.started).toISOString(), record.firstTokenMs,
+    record.totalMs, record.usage.inputTokens, record.usage.outputTokens, record.usage.cachedTokens ?? 0, record.usage.reasoningTokens ?? 0,
+    record.costUsd, record.finishReason, record.retries, record.fallbackFrom,
+  );
+}
+
 async function delay(attempt: number, signal: AbortSignal) {
   const milliseconds = 250 * 2 ** attempt + Math.floor(Math.random() * 150);
   await new Promise<void>((resolve, reject) => {
@@ -236,19 +260,45 @@ export async function* runChat(initialMessages: ChatMessage[], options: ChatOpti
       db.prepare("INSERT INTO messages (id, conversation_id, role, content, metadata, created_at) VALUES (?, ?, 'assistant', ?, ?, ?)")
         .run(crypto.randomUUID(), options.conversationId, finalText, JSON.stringify({ provider: selectedProvider, model: selectedModel }), new Date().toISOString());
     }
-    db.prepare(`
-      INSERT INTO requests (id, conversation_id, provider, model, started_at, first_token_ms, total_ms, input_tokens, output_tokens, cached_tokens, reasoning_tokens, cost_usd, finish_reason, retry_count, fallback_from)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      requestId, options.conversationId, selectedProvider, selectedModel, new Date(started).toISOString(), firstTokenMs,
-      totalMs, totalUsage.inputTokens, totalUsage.outputTokens, totalUsage.cachedTokens ?? 0, totalUsage.reasoningTokens ?? 0,
-      costUsd, finishReason, retries, fallbackFrom,
-    );
+    persistRequest({
+      requestId,
+      conversationId: options.conversationId,
+      provider: selectedProvider,
+      model: selectedModel,
+      started,
+      firstTokenMs,
+      totalMs,
+      usage: totalUsage,
+      costUsd,
+      finishReason,
+      retries,
+      fallbackFrom,
+    });
     db.prepare("UPDATE conversations SET provider = ?, model = ?, updated_at = ? WHERE id = ?")
       .run(selectedProvider, selectedModel, new Date().toISOString(), options.conversationId);
     yield { type: "metrics", firstTokenMs, totalMs, usage: totalUsage, costUsd, retries };
     yield { type: "done", finishReason };
   } catch (error) {
-    yield { type: "error", error: publicError(error) };
+    const safeError = publicError(error);
+    const totalMs = Date.now() - started;
+    try {
+      persistRequest({
+        requestId,
+        conversationId: options.conversationId,
+        provider: selectedProvider,
+        model: selectedModel,
+        started,
+        firstTokenMs,
+        totalMs,
+        usage: totalUsage,
+        costUsd: costFor(selectedProvider, selectedModel, totalUsage),
+        finishReason: `error:${safeError.kind}`,
+        retries,
+        fallbackFrom,
+      });
+    } catch {
+      // The client still receives the sanitized provider error if metrics persistence fails.
+    }
+    yield { type: "error", error: safeError };
   }
 }

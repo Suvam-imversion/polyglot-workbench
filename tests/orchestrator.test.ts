@@ -1,20 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AiProvider, ProviderEvent } from "@/contracts/ai";
 
-const { runMock, getProviderMock, searchDocumentsMock } = vi.hoisted(() => ({
-  runMock: vi.fn(),
-  getProviderMock: vi.fn(),
-  searchDocumentsMock: vi.fn(),
-}));
+const { runMock, prepareMock, getProviderMock, searchDocumentsMock } = vi.hoisted(() => {
+  const run = vi.fn();
+  return {
+    runMock: run,
+    prepareMock: vi.fn(() => ({ run })),
+    getProviderMock: vi.fn(),
+    searchDocumentsMock: vi.fn(),
+  };
+});
 
 vi.mock("@/server/db", () => ({
-  db: { prepare: vi.fn(() => ({ run: runMock })) },
+  db: { prepare: prepareMock },
 }));
 
 vi.mock("@/server/ai/providers", () => ({ getProvider: getProviderMock }));
 vi.mock("@/server/rag", () => ({ searchDocuments: searchDocumentsMock }));
 
 import { runChat, type AppEvent } from "@/server/ai/orchestrator";
+import { ProviderError } from "@/server/ai/errors";
 
 function fakeProvider(rounds: ProviderEvent[][]): AiProvider {
   let index = 0;
@@ -44,6 +49,7 @@ async function collect(options: { collectionId?: string } = {}) {
 describe("chat orchestration", () => {
   beforeEach(() => {
     runMock.mockReset();
+    prepareMock.mockClear();
     getProviderMock.mockReset();
     searchDocumentsMock.mockReset();
   });
@@ -88,5 +94,19 @@ describe("chat orchestration", () => {
     ]]));
     const events = await collect({ collectionId: "10000000-0000-4000-8000-000000000000" });
     expect(events).toContainEqual({ type: "text", text: "\n\nSources: [chunk-1]" });
+  });
+
+  it("persists sanitized metrics for failed provider requests", async () => {
+    getProviderMock.mockResolvedValue({
+      id: "anthropic",
+      async *stream() {
+        throw new ProviderError("auth", "Provider authentication failed");
+      },
+    });
+
+    const events = await collect();
+    expect(events).toContainEqual({ type: "error", error: { kind: "auth", message: "Provider authentication failed" } });
+    expect(prepareMock).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO requests"));
+    expect(runMock.mock.calls.some((call) => call.includes("error:auth"))).toBe(true);
   });
 });
