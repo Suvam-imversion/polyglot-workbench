@@ -2,7 +2,7 @@
 
 ## Tools and scope
 
-I used ChatGPT as a coding assistant for requirements breakdown, implementation drafts, provider-documentation research, test-case design, and documentation editing. I used terminal automation to run tests, linting, type checking, production builds, dependency audits, Docker builds, API smoke tests, and live Gemini verification.
+I used ChatGPT as a coding assistant for requirements breakdown, implementation drafts, provider-documentation research, test-case design, and documentation editing. I used terminal automation to run tests, linting, type checking, production builds, dependency audits, Docker builds, API smoke tests, and live Gemini and Groq verification.
 
 AI assistance was used across the provider adapters, streaming orchestrator, tool loop, RAG pipeline, responsive interface, Docker setup, and Markdown documentation. I reviewed the resulting code against the assignment and kept the implementation deliberately small enough to explain and modify during a live session.
 
@@ -18,6 +18,6 @@ AI assistance was used across the provider adapters, streaming orchestrator, too
 
 ## Validation and remaining judgment calls
 
-Gemini was tested with a live key for text streaming and a complete calculator tool round. Anthropic, Groq, and OpenAI were validated with mocked streaming HTTP fixtures and were not represented as live-tested. Model prices and access can change, so the configuration records the date checked and keeps those values in one file.
+Gemini and Groq were each tested with a live key for text streaming and a complete calculator tool round. Anthropic and OpenAI were validated with mocked streaming HTTP fixtures and are not represented as live-tested. Model prices and access can change, so the configuration records the date checked and keeps those values in one file.
 
-The main areas I would revisit for production are exact token counting, account-level budgets, authentication and tenant isolation, durable ingestion, malware scanning, and retrieval evaluation. These are documented as gaps rather than implied to be complete.
+The main areas I would revisit for production are exact token counting, account-level budgets, authentication and tenant isolation, durable ingestion, malware scanning, and broader retrieval and grounded-answer evaluation. These are documented as gaps rather than implied to be complete.

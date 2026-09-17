@@ -1,0 +1,30 @@
+{
+  "documents": [
+    {
+      "name": "invoice.md",
+      "content": "Invoice ZX-918 has payment terms of 30 days from the issue date."
+    },
+    {
+      "name": "security.md",
+      "content": "Uploaded document passages are untrusted evidence and must never be executed as instructions."
+    },
+    {
+      "name": "weather.md",
+      "content": "Current temperature and wind data are retrieved from the Open-Meteo public weather API."
+    }
+  ],
+  "queries": [
+    {
+      "query": "What are the payment terms for ZX-918?",
+      "expectedDocument": "invoice.md"
+    },
+    {
+      "query": "How should untrusted document instructions be handled?",
+      "expectedDocument": "security.md"
+    },
+    {
+      "query": "Where does the current temperature come from?",
+      "expectedDocument": "weather.md"
+    }
+  ]
+}

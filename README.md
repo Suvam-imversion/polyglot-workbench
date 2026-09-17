@@ -54,9 +54,9 @@ Compose exposes `http://localhost:3000`, runs as a non-root user, checks `/api/c
 | RAG | Done | PDF/TXT/Markdown; vector or BM25+vector hybrid retrieval; inline chunk IDs and inspector |
 | Tool calling | Done | Calculator, Open-Meteo weather, document search; six-round loop |
 | Resilience | Done | Timeouts; retry with backoff/jitter; configurable provider fallback |
-| Observability | Done | TTFT, latency, token categories, configured cost, retries, fallback |
-| Adapter tests | Done | Mocked streaming HTTP fixtures for all four providers |
-| Live provider verification | Partial | Gemini text streaming and a complete calculator tool round were tested with a live key; Anthropic, Groq, and OpenAI use mocked streaming fixtures |
+| Observability | Done | TTFT, latency, token categories, configured cost, retries, fallback, and sanitized failed-request records |
+| Automated tests | Done | Mocked streaming fixtures for all four adapters plus a three-query retrieval evaluation |
+| Live provider verification | Partial | Gemini and Groq text streaming and complete calculator tool rounds were tested live; Anthropic and OpenAI use mocked streaming fixtures |
 | Demo video | Not recorded | Use `docs/DEMO_SCRIPT.md` for a 5-8 minute walkthrough |
 | Side-by-side comparison | Not done | Optional; intentionally left out to keep the core easy to repair |
 | Docker Compose | Done | Multi-stage non-root image, health check, persistent SQLite volume |
@@ -85,6 +85,8 @@ Models, context windows, capabilities, prices, and fallback order live in `src/s
 
 The default `EMBEDDING_PROVIDER=local` is a deterministic hashed bag-of-words embedding that makes the project run without another paid API. Set it to `openai` or `gemini` to use a hosted embedding adapter. SQLite stores vectors as JSON and computes cosine similarity in-process; this is transparent and adequate for a take-home dataset, but not for a large corpus. Retrieval can use vector similarity alone or hybrid mode, which combines vector and BM25 rankings with reciprocal-rank fusion. A selected collection is a grounded mode: retrieval runs before generation, the UI receives the matched chunks, citations use exact chunk IDs, and no match returns exactly `I don't know.` without calling a model.
 
+`tests/fixtures/retrieval-golden.json` provides a small deterministic retrieval set covering exact identifiers, prompt-injection language, and ordinary factual lookup. The test runs those queries through the real hybrid retrieval path and requires the expected document to rank first.
+
 ## Documents
 
 - [Design](docs/DESIGN.md)
@@ -99,4 +101,4 @@ The default `EMBEDDING_PROVIDER=local` is a deterministic hashed bag-of-words em
 - Context sizing uses a conservative character estimate and drops oldest turns first.
 - In-flight partial assistant text is not persisted after cancellation.
 - This is a single-user local app; authentication and tenant isolation are production work.
-- Anthropic, Groq, and OpenAI were not called with live keys during development; their adapters are covered by mocked HTTP streams.
+- Anthropic and OpenAI were not called with live keys during development; their adapters are covered by mocked HTTP streams.

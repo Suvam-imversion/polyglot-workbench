@@ -37,10 +37,10 @@ All non-2xx responses map to one of: `auth`, `rate_limit`, `context_length`, `co
 | --- | --- | --- |
 | Gemini | Live + fixture | Live SSE text response and complete calculator call/result/final-answer round; mocked role, schema, signature, usage, and function-call mapping |
 | Anthropic | Fixture | Mocked Messages API SSE including top-level system prompt, usage, and `input_json_delta` fragments |
-| Groq | Fixture | Mocked OpenAI-compatible SSE plus exact endpoint and isolated `GROQ_API_KEY` assertion |
+| Groq | Live + fixture | Live SSE text response and complete calculator call/result/final-answer round; mocked OpenAI-compatible SSE, endpoint, and key mapping |
 | OpenAI | Fixture | Mocked Chat Completions SSE including split tool arguments and usage |
 
-The first live Gemini tool attempt exposed three differences that the initial fixture did not cover: `additionalProperties` is rejected in function schemas, OpenAI-style `call_id` is rejected, and Gemini 3.x requires its opaque thought signature to be returned on the next tool round. Those translations now live only in the Gemini adapter and are fixture-tested. Anthropic, Groq, and OpenAI remain fully implemented for reviewer keys, as allowed by the assignment.
+The first live Gemini tool attempt exposed three differences that the initial fixture did not cover: `additionalProperties` is rejected in function schemas, OpenAI-style `call_id` is rejected, and Gemini 3.x requires its opaque thought signature to be returned on the next tool round. Those translations now live only in the Gemini adapter and are fixture-tested. Groq's OpenAI-compatible text and tool streams also passed live end-to-end verification. Anthropic and OpenAI remain fully implemented for reviewer keys, as allowed by the assignment.
 
 Model access and prices vary by account and time. Edit only `src/server/config/models.ts` when they change.
 

@@ -29,7 +29,7 @@ flowchart LR
 3. The adapter converts messages/tools into vendor format and yields normalized text, tool-call, usage, and completion events.
 4. The route forwards each event over SSE. Tool argument fragments are accumulated by call ID before execution.
 5. Tools run locally. Their normalized results are appended to the internal conversation and another provider round begins. The loop supports multiple calls and up to six sequential rounds.
-6. Completion stores the assistant message and metrics. Retry occurs only for rate-limit/server errors; fallback only begins before visible output has streamed.
+6. Completion stores the assistant message and metrics. Failed requests also store sanitized failure categories and timing. Retry occurs only for rate-limit/server errors; fallback only begins before visible output has streamed.
 
 ## Provider layering
 
@@ -79,5 +79,5 @@ Known gaps and production additions:
 ## With more time
 
 1. Add opt-in integration tests against provider sandboxes, exact pre-request token counting, and account-level spending budgets.
-2. Build a grounded-answer evaluation set and tune BM25/vector fusion and thresholds against measured retrieval quality.
+2. Expand the small retrieval golden set into grounded-answer evaluation with recall, citation accuracy, and answer-faithfulness scoring, then tune fusion and thresholds against those measurements.
 3. Move long document ingestion to durable background jobs and replace in-process search with a production hybrid-search service.
