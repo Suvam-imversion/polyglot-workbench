@@ -4,10 +4,10 @@ services:
       context: .
     ports:
       - "3000:3000"
+    env_file:
+      - path: .env.local
+        required: false
     environment:
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-local}
       REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-60000}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}

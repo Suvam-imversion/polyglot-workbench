@@ -115,7 +115,7 @@ export function Workbench() {
         setModels(config.models);
         setProviders(config.providers);
         if (list.length) await loadConversation(list[0].id);
-        else await createConversation(config.providers[0].id);
+        else await createConversation(config.providers.find((item) => item.available)?.id ?? config.providers[0].id);
       } catch (error) {
         setStatus(error instanceof Error ? error.message : "Could not load workbench");
       }

@@ -18,7 +18,7 @@ export const providerCatalog: ProviderConfig[] = [
     id: "anthropic",
     label: "Anthropic",
     apiKeyEnv: "ANTHROPIC_API_KEY",
-    fallbacks: ["gemini", "openai"],
+    fallbacks: ["gemini", "groq", "openai"],
     loadAdapter: () => import("@/server/ai/providers/anthropic").then(({ AnthropicProvider }) => new AnthropicProvider()),
     models: [{
       id: "claude-sonnet-5",
@@ -38,7 +38,7 @@ export const providerCatalog: ProviderConfig[] = [
     id: "gemini",
     label: "Gemini",
     apiKeyEnv: "GEMINI_API_KEY",
-    fallbacks: ["anthropic", "openai"],
+    fallbacks: ["groq", "anthropic", "openai"],
     loadAdapter: () => import("@/server/ai/providers/gemini").then(({ GeminiProvider }) => new GeminiProvider()),
     models: [{
       id: "gemini-3.8-flash",
@@ -55,10 +55,29 @@ export const providerCatalog: ProviderConfig[] = [
     }],
   },
   {
+    id: "groq",
+    label: "Groq",
+    apiKeyEnv: "GROQ_API_KEY",
+    fallbacks: ["gemini", "anthropic", "openai"],
+    loadAdapter: () => import("@/server/ai/providers/groq").then(({ GroqProvider }) => new GroqProvider()),
+    models: [{
+      id: "openai/gpt-oss-20b",
+      label: "GPT-OSS 20B",
+      contextWindow: 131_072,
+      maxOutputTokens: 65_536,
+      supportsTools: true,
+      supportsVision: false,
+      supportsJsonSchema: true,
+      supportsStreaming: true,
+      inputUsdPerMillion: 0.075,
+      outputUsdPerMillion: 0.3,
+    }],
+  },
+  {
     id: "openai",
     label: "OpenAI",
     apiKeyEnv: "OPENAI_API_KEY",
-    fallbacks: ["anthropic", "gemini"],
+    fallbacks: ["gemini", "groq", "anthropic"],
     loadAdapter: () => import("@/server/ai/providers/openai").then(({ OpenAiProvider }) => new OpenAiProvider()),
     models: [{
       id: "gpt-5.6-sol",
@@ -94,4 +113,3 @@ export function getModel(provider: ProviderId, modelId?: string) {
   if (!match) throw new Error(`Unknown provider: ${provider}`);
   return match;
 }
-

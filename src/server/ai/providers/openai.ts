@@ -20,15 +20,26 @@ function toMessage(message: ChatMessage) {
   return { role: message.role, content: message.content };
 }
 
-export class OpenAiProvider implements AiProvider {
-  readonly id = "openai" as const;
+type OpenAiCompatibleOptions = {
+  id: string;
+  endpoint: string;
+  apiKeyEnv: string;
+  maxTokensField?: "max_tokens" | "max_completion_tokens";
+};
+
+export class OpenAiCompatibleProvider implements AiProvider {
+  readonly id: string;
+
+  constructor(private readonly options: OpenAiCompatibleOptions) {
+    this.id = options.id;
+  }
 
   async *stream(request: ProviderRequest, signal: AbortSignal): AsyncGenerator<ProviderEvent> {
-    const response = await providerFetch("https://api.openai.com/v1/chat/completions", {
+    const response = await providerFetch(this.options.endpoint, {
       method: "POST",
       signal,
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY ?? ""}`,
+        Authorization: `Bearer ${process.env[this.options.apiKeyEnv] ?? ""}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -42,7 +53,7 @@ export class OpenAiProvider implements AiProvider {
           : undefined,
         stream: true,
         stream_options: { include_usage: true },
-        max_completion_tokens: request.maxOutputTokens,
+        [this.options.maxTokensField ?? "max_completion_tokens"]: request.maxOutputTokens,
       }),
     });
     if (!response.ok) throw normalizeHttpError(response.status, await response.text());
@@ -80,5 +91,15 @@ export class OpenAiProvider implements AiProvider {
       }
     }
     yield { type: "done", finishReason };
+  }
+}
+
+export class OpenAiProvider extends OpenAiCompatibleProvider {
+  constructor() {
+    super({
+      id: "openai",
+      endpoint: "https://api.openai.com/v1/chat/completions",
+      apiKeyEnv: "OPENAI_API_KEY",
+    });
   }
 }

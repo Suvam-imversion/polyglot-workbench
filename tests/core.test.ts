@@ -16,7 +16,7 @@ describe("core behavior", () => {
   });
 
   it("keeps every required model capability in the provider catalog", () => {
-    expect(providerCatalog.map((provider) => provider.id)).toEqual(expect.arrayContaining(["anthropic", "gemini", "openai"]));
+    expect(providerCatalog.map((provider) => provider.id)).toEqual(expect.arrayContaining(["anthropic", "gemini", "groq", "openai"]));
     for (const provider of providerCatalog) {
       expect(provider.models.length).toBeGreaterThan(0);
       for (const model of provider.models) {

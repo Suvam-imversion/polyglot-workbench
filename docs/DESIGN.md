@@ -10,6 +10,7 @@ flowchart LR
   ORCH --> REG[Provider registry]
   REG --> A[Anthropic adapter]
   REG --> G[Gemini adapter]
+  REG --> Q[Groq adapter]
   REG --> O[OpenAI adapter]
   ORCH --> TOOLS[Tool registry]
   TOOLS --> WEATHER[Open-Meteo]

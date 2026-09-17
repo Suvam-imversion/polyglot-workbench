@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AiProvider, ProviderRequest } from "@/contracts/ai";
 import { AnthropicProvider } from "@/server/ai/providers/anthropic";
 import { GeminiProvider } from "@/server/ai/providers/gemini";
+import { GroqProvider } from "@/server/ai/providers/groq";
 import { OpenAiProvider } from "@/server/ai/providers/openai";
 
 const request: ProviderRequest = {
@@ -28,7 +29,10 @@ async function collect(provider: Pick<AiProvider, "stream">) {
   return events;
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 
 describe("provider adapters", () => {
   it("maps OpenAI messages and accumulatable streamed tool fragments", async () => {
@@ -46,6 +50,21 @@ describe("provider adapters", () => {
     expect(body.tools[0].function.name).toBe("calculator");
     expect(events.filter((event) => event.type === "tool_call_delta").map((event) => event.id)).toEqual(["call-1", "call-1"]);
     expect(events).toContainEqual({ type: "text_delta", text: "Four" });
+  });
+
+  it("uses Groq's OpenAI-compatible endpoint and isolated API key", async () => {
+    vi.stubEnv("GROQ_API_KEY", "groq-fixture-key");
+    const fetchMock = vi.fn().mockResolvedValue(sse([
+      { data: { choices: [{ delta: { content: "Fast response" }, finish_reason: "stop" }], usage: { prompt_tokens: 8, completion_tokens: 2 } } },
+      { data: "[DONE]" },
+    ]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const events = await collect(new GroqProvider());
+    expect(fetchMock.mock.calls[0][0]).toBe("https://api.groq.com/openai/v1/chat/completions");
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe("Bearer groq-fixture-key");
+    expect(events).toContainEqual({ type: "text_delta", text: "Fast response" });
+    expect(events).toContainEqual({ type: "done", finishReason: "stop" });
   });
 
   it("keeps Anthropic system instructions top-level and parses input_json_delta", async () => {
