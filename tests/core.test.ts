@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { normalizeHttpError } from "@/server/ai/errors";
+import { normalizeHttpError, normalizeStreamError } from "@/server/ai/errors";
 import { LocalEmbeddingProvider } from "@/server/ai/embeddings";
 import { splitText } from "@/server/rag";
 import { executeTool } from "@/server/tools";
+import { providerCatalog } from "@/server/config/models";
 
 describe("core behavior", () => {
   it("normalizes provider errors", () => {
@@ -10,6 +11,26 @@ describe("core behavior", () => {
     expect(normalizeHttpError(429, "slow down").kind).toBe("rate_limit");
     expect(normalizeHttpError(400, "context length exceeded").kind).toBe("context_length");
     expect(normalizeHttpError(503, "unavailable").kind).toBe("server_error");
+    expect(normalizeStreamError("SAFETY").kind).toBe("content_filter");
+    expect(normalizeStreamError("overloaded_error").kind).toBe("rate_limit");
+  });
+
+  it("keeps every required model capability in the provider catalog", () => {
+    expect(providerCatalog.map((provider) => provider.id)).toEqual(expect.arrayContaining(["anthropic", "gemini", "openai"]));
+    for (const provider of providerCatalog) {
+      expect(provider.models.length).toBeGreaterThan(0);
+      for (const model of provider.models) {
+        expect(model).toEqual(expect.objectContaining({
+          supportsTools: expect.any(Boolean),
+          supportsVision: expect.any(Boolean),
+          supportsJsonSchema: expect.any(Boolean),
+          supportsStreaming: expect.any(Boolean),
+          contextWindow: expect.any(Number),
+          inputUsdPerMillion: expect.any(Number),
+          outputUsdPerMillion: expect.any(Number),
+        }));
+      }
+    }
   });
 
   it("evaluates arithmetic without eval", async () => {
@@ -27,4 +48,3 @@ describe("core behavior", () => {
     expect(chunks.every((chunk) => chunk.length <= 241)).toBe(true);
   });
 });
-

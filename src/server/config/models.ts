@@ -1,52 +1,97 @@
-import type { ModelConfig, ProviderId } from "@/contracts/ai";
+import type { AiProvider, ModelConfig, ProviderId } from "@/contracts/ai";
 
-export const models: ModelConfig[] = [
+type ConfiguredModel = Omit<ModelConfig, "provider">;
+
+export type ProviderConfig = {
+  id: ProviderId;
+  label: string;
+  apiKeyEnv: string;
+  fallbacks: ProviderId[];
+  loadAdapter: () => Promise<AiProvider>;
+  models: ConfiguredModel[];
+};
+
+// Adding a provider means adding its adapter file and one entry here. All validation,
+// registry loading, UI labels, model lists, key status, and fallbacks derive from this catalog.
+export const providerCatalog: ProviderConfig[] = [
   {
-    id: "claude-sonnet-5",
-    provider: "anthropic",
-    label: "Claude Sonnet 5",
-    contextWindow: 1_000_000,
-    maxOutputTokens: 128_000,
-    supportsTools: true,
-    supportsStreaming: true,
-    inputUsdPerMillion: 2,
-    outputUsdPerMillion: 10,
-    cachedInputUsdPerMillion: 0.2,
+    id: "anthropic",
+    label: "Anthropic",
+    apiKeyEnv: "ANTHROPIC_API_KEY",
+    fallbacks: ["gemini", "openai"],
+    loadAdapter: () => import("@/server/ai/providers/anthropic").then(({ AnthropicProvider }) => new AnthropicProvider()),
+    models: [{
+      id: "claude-sonnet-5",
+      label: "Claude Sonnet 5",
+      contextWindow: 1_000_000,
+      maxOutputTokens: 128_000,
+      supportsTools: true,
+      supportsVision: true,
+      supportsJsonSchema: true,
+      supportsStreaming: true,
+      inputUsdPerMillion: 2,
+      outputUsdPerMillion: 10,
+      cachedInputUsdPerMillion: 0.2,
+    }],
   },
   {
-    id: "gemini-3.8-flash",
-    provider: "gemini",
-    label: "Gemini 3.8 Flash",
-    contextWindow: 1_048_576,
-    maxOutputTokens: 65_536,
-    supportsTools: true,
-    supportsStreaming: true,
-    inputUsdPerMillion: 0.75,
-    outputUsdPerMillion: 3.75,
-    cachedInputUsdPerMillion: 0.075,
+    id: "gemini",
+    label: "Gemini",
+    apiKeyEnv: "GEMINI_API_KEY",
+    fallbacks: ["anthropic", "openai"],
+    loadAdapter: () => import("@/server/ai/providers/gemini").then(({ GeminiProvider }) => new GeminiProvider()),
+    models: [{
+      id: "gemini-3.8-flash",
+      label: "Gemini 3.8 Flash",
+      contextWindow: 1_048_576,
+      maxOutputTokens: 65_536,
+      supportsTools: true,
+      supportsVision: true,
+      supportsJsonSchema: true,
+      supportsStreaming: true,
+      inputUsdPerMillion: 0.75,
+      outputUsdPerMillion: 3.75,
+      cachedInputUsdPerMillion: 0.075,
+    }],
   },
   {
-    id: "gpt-5.6-sol",
-    provider: "openai",
-    label: "GPT-5.6 Sol",
-    contextWindow: 1_050_000,
-    maxOutputTokens: 128_000,
-    supportsTools: true,
-    supportsStreaming: true,
-    inputUsdPerMillion: 4,
-    outputUsdPerMillion: 20,
-    cachedInputUsdPerMillion: 0.4,
+    id: "openai",
+    label: "OpenAI",
+    apiKeyEnv: "OPENAI_API_KEY",
+    fallbacks: ["anthropic", "gemini"],
+    loadAdapter: () => import("@/server/ai/providers/openai").then(({ OpenAiProvider }) => new OpenAiProvider()),
+    models: [{
+      id: "gpt-5.6-sol",
+      label: "GPT-5.6 Sol",
+      contextWindow: 1_050_000,
+      maxOutputTokens: 128_000,
+      supportsTools: true,
+      supportsVision: true,
+      supportsJsonSchema: true,
+      supportsStreaming: true,
+      inputUsdPerMillion: 4,
+      outputUsdPerMillion: 20,
+      cachedInputUsdPerMillion: 0.4,
+    }],
   },
 ];
 
-export const fallbackChain: Record<ProviderId, ProviderId[]> = {
-  anthropic: ["gemini", "openai"],
-  gemini: ["anthropic", "openai"],
-  openai: ["anthropic", "gemini"],
-};
+export const models: ModelConfig[] = providerCatalog.flatMap((provider) =>
+  provider.models.map((model) => ({ ...model, provider: provider.id })),
+);
+
+export const fallbackChain = Object.fromEntries(
+  providerCatalog.map((provider) => [provider.id, provider.fallbacks]),
+) as Record<ProviderId, ProviderId[]>;
+
+export function getProviderConfig(id: ProviderId) {
+  return providerCatalog.find((provider) => provider.id === id);
+}
 
 export function getModel(provider: ProviderId, modelId?: string) {
-  const match = models.find((model) => model.provider === provider && model.id === modelId);
-  return match ?? models.find((model) => model.provider === provider)!;
+  const providerModels = models.filter((model) => model.provider === provider);
+  const match = providerModels.find((model) => model.id === modelId) ?? providerModels[0];
+  if (!match) throw new Error(`Unknown provider: ${provider}`);
+  return match;
 }
 

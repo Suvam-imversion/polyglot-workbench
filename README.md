@@ -51,7 +51,8 @@ npm run build
 
 ```text
 src/contracts/ai.ts              provider-neutral contract
-src/server/ai/providers/         one file per provider + one registry
+src/server/ai/providers/         one adapter file per provider
+src/server/config/models.ts      provider catalog, models, capabilities, prices
 src/server/ai/orchestrator.ts    retry, fallback, streaming, and tool loop
 src/server/tools.ts              three normalized tools
 src/server/rag.ts                chunking and similarity search
@@ -60,7 +61,7 @@ src/app/api/                     thin HTTP/SSE route handlers
 src/components/workbench.tsx     single-screen UI
 ```
 
-To add a provider, add one adapter file and one registry/config entry. No orchestration, tool, persistence, or UI code needs vendor-specific logic.
+To add a provider, add one adapter file and one `providerCatalog` entry in `src/server/config/models.ts`. Validation, lazy adapter loading, UI labels, model lists, key status, and fallback configuration are all derived from that catalog; no other code changes are needed.
 
 The assignment referenced a seed-repository contract, but no seed repository was supplied in the workspace. The provider-neutral contract is therefore defined in `src/contracts/ai.ts` and this assumption is documented rather than hidden.
 
@@ -68,7 +69,7 @@ The assignment referenced a seed-repository contract, but no seed repository was
 
 Models, context windows, capabilities, prices, and fallback order live in `src/server/config/models.ts`. Prices were checked against official provider pages on 2026-09-17 and should be reviewed before production use.
 
-The default `EMBEDDING_PROVIDER=local` is a deterministic hashed bag-of-words embedding that makes the project run without another paid API. Set it to `openai` or `gemini` to use a hosted embedding adapter. SQLite stores vectors as JSON and computes cosine similarity in-process; this is transparent and adequate for a take-home dataset, but not for a large corpus.
+The default `EMBEDDING_PROVIDER=local` is a deterministic hashed bag-of-words embedding that makes the project run without another paid API. Set it to `openai` or `gemini` to use a hosted embedding adapter. SQLite stores vectors as JSON and computes cosine similarity in-process; this is transparent and adequate for a take-home dataset, but not for a large corpus. A selected collection is a grounded mode: retrieval runs before generation, the UI receives the matched chunks, citations use exact chunk IDs, and no match returns exactly `I don't know.` without calling a model.
 
 ## Documents
 

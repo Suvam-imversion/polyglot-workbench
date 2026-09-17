@@ -19,8 +19,7 @@ type RequestMetric = {
 };
 type AggregateMetric = { provider: string; requests: number; spend: number; average_latency_ms: number; average_ttft_ms: number };
 type StreamMetric = { firstTokenMs: number | null; totalMs: number; usage: Usage; costUsd: number; retries: number };
-
-const providerNames: Record<ProviderId, string> = { anthropic: "Anthropic", gemini: "Gemini", openai: "OpenAI" };
+type ProviderSummary = { id: ProviderId; label: string; available: boolean };
 
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
@@ -30,7 +29,7 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function Workbench() {
   const [models, setModels] = useState<ModelConfig[]>([]);
-  const [providerStatus, setProviderStatus] = useState<Record<string, boolean>>({});
+  const [providers, setProviders] = useState<ProviderSummary[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -59,6 +58,7 @@ export function Workbench() {
 
   const availableModels = useMemo(() => models.filter((item) => item.provider === provider), [models, provider]);
   const selectedModel = availableModels.find((item) => item.id === model);
+  const providerLabel = useCallback((id: ProviderId) => providers.find((item) => item.id === id)?.label ?? id, [providers]);
 
   const refreshConversations = useCallback(async () => {
     const data = await json<{ conversations: Conversation[] }>("/api/conversations");
@@ -107,13 +107,13 @@ export function Workbench() {
     void (async () => {
       try {
         const [config, list] = await Promise.all([
-          json<{ models: ModelConfig[]; providers: Record<string, boolean> }>("/api/config"),
+          json<{ models: ModelConfig[]; providers: ProviderSummary[] }>("/api/config"),
           refreshConversations(), refreshCollections(), refreshMetrics(),
         ]);
         setModels(config.models);
-        setProviderStatus(config.providers);
+        setProviders(config.providers);
         if (list.length) await loadConversation(list[0].id);
-        else await createConversation("anthropic");
+        else await createConversation(config.providers[0].id);
       } catch (error) {
         setStatus(error instanceof Error ? error.message : "Could not load workbench");
       }
@@ -171,7 +171,9 @@ export function Workbench() {
             setStatus(event.status === "calling" ? `Calling ${event.name}` : `${event.name} complete`);
             if (event.status === "complete" && event.name === "search_documents") setRetrieved(event.result?.chunks ?? []);
           }
-          if (event.type === "fallback") setStatus(`Fallback: ${providerNames[event.to as ProviderId]}`);
+          if (event.type === "retrieval") setRetrieved(event.chunks ?? []);
+          if (event.type === "notice") setStatus(event.message);
+          if (event.type === "fallback") setStatus(`Fallback: ${providerLabel(event.to)}`);
           if (event.type === "metrics") setLiveMetric(event);
           if (event.type === "error") throw new Error(event.error.message);
         }
@@ -223,15 +225,15 @@ export function Workbench() {
         <nav className="conversation-list">
           {conversations.map((conversation) => (
             <div className={`conversation-item ${conversation.id === activeId ? "active" : ""}`} key={conversation.id}>
-              <button onClick={() => void loadConversation(conversation.id)}><span>{conversation.title}</span><small>{providerNames[conversation.provider]}</small></button>
+              <button onClick={() => void loadConversation(conversation.id)}><span>{conversation.title}</span><small>{providerLabel(conversation.provider)}</small></button>
               <button className="delete-button" onClick={() => void deleteConversation(conversation.id)} title="Delete conversation"><Trash2 size={14} /></button>
             </div>
           ))}
         </nav>
         <div className="provider-health">
           <div className="rail-label">API keys</div>
-          {(Object.keys(providerNames) as ProviderId[]).map((id) => (
-            <div key={id}><span className={`status-dot ${providerStatus[id] ? "online" : ""}`} />{providerNames[id]}<small>{providerStatus[id] ? "ready" : "missing"}</small></div>
+          {providers.map((item) => (
+            <div key={item.id}><span className={`status-dot ${item.available ? "online" : ""}`} />{item.label}<small>{item.available ? "ready" : "missing"}</small></div>
           ))}
         </div>
       </aside>
@@ -239,7 +241,7 @@ export function Workbench() {
       <section className="chat-column">
         <header className="topbar">
           <button className="icon-button mobile-only" onClick={() => setMobileNav(true)} title="Open navigation"><Menu size={19} /></button>
-          <label className="select-field"><span>Provider</span><select value={provider} onChange={(event) => { const nextProvider = event.target.value as ProviderId; setProvider(nextProvider); setModel(models.find((item) => item.provider === nextProvider)?.id ?? ""); }}>{(Object.keys(providerNames) as ProviderId[]).map((id) => <option value={id} key={id}>{providerNames[id]}</option>)}</select><ChevronDown size={14} /></label>
+          <label className="select-field"><span>Provider</span><select value={provider} onChange={(event) => { const nextProvider = event.target.value; setProvider(nextProvider); setModel(models.find((item) => item.provider === nextProvider)?.id ?? ""); }}>{providers.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}</select><ChevronDown size={14} /></label>
           <label className="select-field model-field"><span>Model</span><select value={model} onChange={(event) => setModel(event.target.value)}>{availableModels.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}</select><ChevronDown size={14} /></label>
           <div className="topbar-spacer" />
           <span className="request-status"><span className={`status-dot ${streaming ? "busy" : "online"}`} />{status}</span>
@@ -254,7 +256,7 @@ export function Workbench() {
             </div>
           ) : (
             <div className="message-list">
-              {messages.map((message) => <article className={`message ${message.role}`} key={message.id}><div className="message-author">{message.role === "user" ? "You" : providerNames[provider]}</div><div className="message-body"><ReactMarkdown>{message.content || "..."}</ReactMarkdown></div></article>)}
+              {messages.map((message) => <article className={`message ${message.role}`} key={message.id}><div className="message-author">{message.role === "user" ? "You" : providerLabel(provider)}</div><div className="message-body"><ReactMarkdown>{message.content || "..."}</ReactMarkdown></div></article>)}
               {retrieved.length > 0 && <div className="citation-strip"><BookOpen size={15} /> Retrieved {retrieved.length} supporting chunks. Open Documents to inspect them.</div>}
               <div ref={bottomRef} />
             </div>
@@ -278,8 +280,8 @@ export function Workbench() {
           <section className="panel-section retrieved-section"><h2>Retrieved chunks <span>{retrieved.length}</span></h2>{!retrieved.length ? <p className="quiet-copy">Relevant source text will appear here after a document search.</p> : retrieved.map((chunk) => <article className="chunk" key={chunk.id}><header><span>{chunk.documentName} · #{chunk.chunkIndex + 1}</span><strong>{Math.round(chunk.score * 100)}%</strong></header><p>{chunk.content}</p><code>{chunk.id}</code></article>)}</section>
         </div> : <div className="inspector-content">
           <section className="metric-summary"><div><Gauge size={16} /><span>Last request</span><strong>{liveMetric ? `${liveMetric.totalMs} ms` : "--"}</strong></div><div><Activity size={16} /><span>First token</span><strong>{liveMetric?.firstTokenMs != null ? `${liveMetric.firstTokenMs} ms` : "--"}</strong></div><div><Wrench size={16} /><span>Retries</span><strong>{liveMetric?.retries ?? 0}</strong></div><div><span className="dollar">$</span><span>Cost</span><strong>{liveMetric ? `$${liveMetric.costUsd.toFixed(6)}` : "--"}</strong></div></section>
-          <section className="panel-section"><h2>Provider totals</h2><div className="provider-table">{aggregateMetrics.length ? aggregateMetrics.map((row) => <div key={row.provider}><strong>{providerNames[row.provider as ProviderId]}</strong><span>{row.requests} req</span><span>{row.average_latency_ms ?? 0} ms</span><span>${Number(row.spend ?? 0).toFixed(4)}</span></div>) : <p className="quiet-copy">No completed requests yet.</p>}</div></section>
-          <section className="panel-section"><h2>Recent requests</h2><div className="request-list">{recentMetrics.map((metric) => <article key={metric.id}><header><strong>{providerNames[metric.provider as ProviderId]}</strong><span>{new Date(metric.started_at).toLocaleTimeString()} · {metric.total_ms} ms</span></header><p>{metric.model} · {metric.finish_reason}{metric.fallback_from ? ` · fallback from ${providerNames[metric.fallback_from as ProviderId]}` : ""}</p><footer><span>{metric.input_tokens} in / {metric.output_tokens} out · {metric.cached_tokens} cached / {metric.reasoning_tokens} reasoning · {metric.retry_count} retries</span><span>${Number(metric.cost_usd).toFixed(6)}</span></footer></article>)}</div></section>
+          <section className="panel-section"><h2>Provider totals</h2><div className="provider-table">{aggregateMetrics.length ? aggregateMetrics.map((row) => <div key={row.provider}><strong>{providerLabel(row.provider)}</strong><span>{row.requests} req</span><span>{row.average_latency_ms ?? 0} ms</span><span>${Number(row.spend ?? 0).toFixed(4)}</span></div>) : <p className="quiet-copy">No completed requests yet.</p>}</div></section>
+          <section className="panel-section"><h2>Recent requests</h2><div className="request-list">{recentMetrics.map((metric) => <article key={metric.id}><header><strong>{providerLabel(metric.provider)}</strong><span>{new Date(metric.started_at).toLocaleTimeString()}</span></header><p>{metric.model} · {metric.finish_reason}{metric.fallback_from ? ` · fallback from ${providerLabel(metric.fallback_from)}` : ""}</p><footer><span>TTFT {metric.first_token_ms ?? "--"} ms · total {metric.total_ms} ms · {metric.input_tokens} in / {metric.output_tokens} out · {metric.cached_tokens} cached / {metric.reasoning_tokens} reasoning · {metric.retry_count} retries</span><span>${Number(metric.cost_usd).toFixed(6)}</span></footer></article>)}</div></section>
         </div>}
       </aside>}
     </main>

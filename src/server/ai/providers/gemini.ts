@@ -1,5 +1,5 @@
 import type { AiProvider, ChatMessage, ProviderEvent, ProviderRequest } from "@/contracts/ai";
-import { normalizeHttpError } from "@/server/ai/errors";
+import { normalizeHttpError, normalizeStreamError, providerFetch } from "@/server/ai/errors";
 import { parseSse } from "@/server/ai/sse";
 
 function toContents(messages: ChatMessage[]) {
@@ -46,7 +46,7 @@ export class GeminiProvider implements AiProvider {
     const key = process.env.GEMINI_API_KEY ?? "";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(request.model)}:streamGenerateContent?alt=sse`;
     const system = request.messages.filter((message) => message.role === "system").map((message) => message.content).join("\n\n");
-    const response = await fetch(url, {
+    const response = await providerFetch(url, {
       method: "POST",
       signal,
       headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
@@ -71,7 +71,12 @@ export class GeminiProvider implements AiProvider {
     let toolIndex = 0;
     for await (const frame of parseSse(response)) {
       const chunk = JSON.parse(frame.data);
+      if (chunk.error) throw normalizeStreamError(chunk.error.status ?? chunk.error.code ?? "server_error", chunk.error.message);
+      if (chunk.promptFeedback?.blockReason) throw normalizeStreamError("content_filter", chunk.promptFeedback.blockReason);
       const candidate = chunk.candidates?.[0];
+      if (candidate?.finishReason === "SAFETY" || candidate?.finishReason === "BLOCKLIST") {
+        throw normalizeStreamError("content_filter", candidate.finishReason);
+      }
       for (const part of candidate?.content?.parts ?? []) {
         if (part.text) yield { type: "text_delta", text: part.text };
         if (part.functionCall) {
@@ -100,4 +105,3 @@ export class GeminiProvider implements AiProvider {
     yield { type: "done", finishReason };
   }
 }
-

@@ -1,5 +1,5 @@
 import type { AiProvider, ChatMessage, ProviderEvent, ProviderRequest } from "@/contracts/ai";
-import { normalizeHttpError } from "@/server/ai/errors";
+import { normalizeHttpError, normalizeStreamError, providerFetch } from "@/server/ai/errors";
 import { parseSse } from "@/server/ai/sse";
 
 type AnthropicBlock = Record<string, unknown>;
@@ -37,7 +37,7 @@ export class AnthropicProvider implements AiProvider {
 
   async *stream(request: ProviderRequest, signal: AbortSignal): AsyncGenerator<ProviderEvent> {
     const system = request.messages.filter((message) => message.role === "system").map((message) => message.content).join("\n\n");
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await providerFetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       signal,
       headers: {
@@ -65,6 +65,7 @@ export class AnthropicProvider implements AiProvider {
     const blocks = new Map<number, { id: string; name: string }>();
     for await (const frame of parseSse(response)) {
       const event = JSON.parse(frame.data);
+      if (event.type === "error") throw normalizeStreamError(event.error?.type ?? "server_error", event.error?.message);
       if (event.type === "content_block_start" && event.content_block?.type === "tool_use") {
         blocks.set(event.index, { id: event.content_block.id, name: event.content_block.name });
         yield { type: "tool_call_delta", id: event.content_block.id, name: event.content_block.name, arguments: "" };
@@ -96,4 +97,3 @@ export class AnthropicProvider implements AiProvider {
     yield { type: "done", finishReason };
   }
 }
-

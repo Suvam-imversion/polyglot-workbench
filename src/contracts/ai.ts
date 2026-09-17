@@ -1,4 +1,4 @@
-export type ProviderId = "openai" | "anthropic" | "gemini";
+export type ProviderId = string;
 
 export type ErrorKind =
   | "auth"
@@ -61,9 +61,10 @@ export type ModelConfig = {
   contextWindow: number;
   maxOutputTokens: number;
   supportsTools: boolean;
+  supportsVision: boolean;
+  supportsJsonSchema: boolean;
   supportsStreaming: boolean;
   inputUsdPerMillion: number;
   outputUsdPerMillion: number;
   cachedInputUsdPerMillion?: number;
 };
-

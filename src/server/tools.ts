@@ -1,5 +1,6 @@
 import type { ToolDefinition } from "@/contracts/ai";
 import { searchDocuments, type RetrievalOptions } from "@/server/rag";
+import { z } from "zod";
 
 export const toolDefinitions: ToolDefinition[] = [
   {
@@ -121,12 +122,19 @@ export type ToolContext = {
 };
 
 export async function executeTool(name: string, rawArguments: string, context: ToolContext) {
-  const input = JSON.parse(rawArguments || "{}");
-  if (name === "calculator") return { result: new ArithmeticParser(String(input.expression ?? "")).parse() };
-  if (name === "get_weather") return weather(String(input.location ?? ""), context.signal);
+  const input: unknown = JSON.parse(rawArguments || "{}");
+  if (name === "calculator") {
+    const parsed = z.object({ expression: z.string().min(1).max(200) }).parse(input);
+    return { result: new ArithmeticParser(parsed.expression).parse() };
+  }
+  if (name === "get_weather") {
+    const parsed = z.object({ location: z.string().trim().min(1).max(200) }).parse(input);
+    return weather(parsed.location, context.signal);
+  }
   if (name === "search_documents") {
+    const parsed = z.object({ query: z.string().trim().min(1).max(2000) }).parse(input);
     if (!context.collectionId) return { chunks: [], answerPolicy: "No collection selected. Say: I don't know based on the documents." };
-    const chunks = await searchDocuments(context.collectionId, String(input.query ?? ""), context.retrieval);
+    const chunks = await searchDocuments(context.collectionId, parsed.query, context.retrieval);
     return {
       chunks,
       answerPolicy: chunks.length ? "Cite chunk IDs in square brackets." : "No relevant chunks found. Say: I don't know based on the documents.",
@@ -134,4 +142,3 @@ export async function executeTool(name: string, rawArguments: string, context: T
   }
   throw new Error(`Unknown tool: ${name}`);
 }
-

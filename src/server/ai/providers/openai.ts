@@ -1,5 +1,5 @@
 import type { AiProvider, ChatMessage, ProviderEvent, ProviderRequest } from "@/contracts/ai";
-import { normalizeHttpError } from "@/server/ai/errors";
+import { normalizeHttpError, normalizeStreamError, providerFetch } from "@/server/ai/errors";
 import { parseSse } from "@/server/ai/sse";
 
 function toMessage(message: ChatMessage) {
@@ -24,7 +24,7 @@ export class OpenAiProvider implements AiProvider {
   readonly id = "openai" as const;
 
   async *stream(request: ProviderRequest, signal: AbortSignal): AsyncGenerator<ProviderEvent> {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await providerFetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       signal,
       headers: {
@@ -52,6 +52,7 @@ export class OpenAiProvider implements AiProvider {
     for await (const frame of parseSse(response)) {
       if (frame.data === "[DONE]") continue;
       const chunk = JSON.parse(frame.data);
+      if (chunk.error) throw normalizeStreamError(chunk.error.code ?? chunk.error.type ?? "server_error", chunk.error.message);
       const choice = chunk.choices?.[0];
       const delta = choice?.delta;
       if (delta?.content) yield { type: "text_delta", text: delta.content };

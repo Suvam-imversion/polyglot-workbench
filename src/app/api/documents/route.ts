@@ -4,7 +4,21 @@ import { splitText } from "@/server/rag";
 
 export const runtime = "nodejs";
 
-const allowedTypes = new Set(["text/plain", "text/markdown", "application/pdf"]);
+const allowedExtensions = new Set([".pdf", ".txt", ".md", ".markdown"]);
+const allowedTypes = new Set(["", "text/plain", "text/markdown", "application/pdf"]);
+
+function extensionOf(name: string) {
+  const index = name.lastIndexOf(".");
+  return index < 0 ? "" : name.slice(index).toLowerCase();
+}
+
+async function hasValidSignature(file: File) {
+  const bytes = new Uint8Array(await file.slice(0, 512).arrayBuffer());
+  if (extensionOf(file.name) === ".pdf") {
+    return new TextDecoder().decode(bytes.slice(0, 5)) === "%PDF-";
+  }
+  return !bytes.includes(0);
+}
 
 async function extractText(file: File) {
   if (file.type !== "application/pdf") return file.text();
@@ -35,9 +49,16 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const files = form.getAll("files").filter((item): item is File => item instanceof File);
   const maxBytes = Number(process.env.MAX_UPLOAD_MB ?? 10) * 1024 * 1024;
+  const maxTotalBytes = Number(process.env.MAX_TOTAL_UPLOAD_MB ?? 25) * 1024 * 1024;
   if (!files.length || files.length > 10) return Response.json({ error: "Upload 1 to 10 files" }, { status: 400 });
-  if (files.some((file) => !allowedTypes.has(file.type) || file.size > maxBytes)) {
+  if (files.reduce((total, file) => total + file.size, 0) > maxTotalBytes) {
+    return Response.json({ error: "Combined upload exceeds the total size limit" }, { status: 413 });
+  }
+  if (files.some((file) => !allowedExtensions.has(extensionOf(file.name)) || !allowedTypes.has(file.type) || file.size > maxBytes)) {
     return Response.json({ error: "Only PDF, TXT, or Markdown files within the size limit are allowed" }, { status: 400 });
+  }
+  if (!(await Promise.all(files.map(hasValidSignature))).every(Boolean)) {
+    return Response.json({ error: "A file's content does not match an allowed document type" }, { status: 400 });
   }
 
   const chunkSize = Math.max(200, Math.min(Number(form.get("chunkSize") ?? 1000), 4000));

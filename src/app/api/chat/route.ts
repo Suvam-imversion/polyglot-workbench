@@ -1,14 +1,14 @@
 import { z } from "zod";
 import type { ChatMessage } from "@/contracts/ai";
 import { runChat } from "@/server/ai/orchestrator";
-import { models } from "@/server/config/models";
+import { models, getProviderConfig } from "@/server/config/models";
 import { db } from "@/server/db";
 
 export const runtime = "nodejs";
 
 const inputSchema = z.object({
   conversationId: z.string().uuid(),
-  provider: z.enum(["openai", "anthropic", "gemini"]),
+  provider: z.string().min(1).max(50),
   model: z.string().min(1).max(100),
   message: z.string().trim().min(1).max(30_000),
   collectionId: z.string().uuid().optional(),
@@ -20,6 +20,7 @@ export async function POST(request: Request) {
   const parsed = inputSchema.safeParse(await request.json());
   if (!parsed.success) return Response.json({ error: "Invalid chat request" }, { status: 400 });
   const input = parsed.data;
+  if (!getProviderConfig(input.provider)) return Response.json({ error: "Unknown provider" }, { status: 400 });
   if (!models.some((model) => model.provider === input.provider && model.id === input.model)) {
     return Response.json({ error: "Unknown provider/model combination" }, { status: 400 });
   }
