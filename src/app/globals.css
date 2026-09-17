@@ -109,6 +109,10 @@ button { cursor: pointer; }
 .collection-summary span:last-child { margin-left: auto; }
 .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .control-grid label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; }
+.mode-switch { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 12px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.mode-switch button { min-height: 34px; border: 0; border-right: 1px solid var(--line); background: var(--paper); color: var(--muted); font-size: 12px; }
+.mode-switch button:last-child { border-right: 0; }
+.mode-switch button.active { background: var(--ink); color: white; }
 .retrieved-section h2 { display: flex; justify-content: space-between; }
 .retrieved-section h2 span { color: var(--muted); font-weight: 400; }
 .quiet-copy { color: var(--muted); font-size: 11px; line-height: 1.5; }
@@ -152,4 +156,3 @@ button { cursor: pointer; }
   .prompt-row { grid-template-columns: 1fr; }
   .prompt-row button { min-height: 44px; border-right: 0; border-bottom: 1px solid var(--line); }
 }
-

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { normalizeHttpError, normalizeStreamError } from "@/server/ai/errors";
 import { LocalEmbeddingProvider } from "@/server/ai/embeddings";
-import { splitText } from "@/server/rag";
+import { bm25Scores, reciprocalRankFusion, splitText } from "@/server/rag";
 import { executeTool } from "@/server/tools";
 import { providerCatalog } from "@/server/config/models";
 
@@ -46,5 +46,21 @@ describe("core behavior", () => {
     const chunks = splitText("First paragraph. ".repeat(80), 240, 40);
     expect(chunks.length).toBeGreaterThan(1);
     expect(chunks.every((chunk) => chunk.length <= 241)).toBe(true);
+  });
+
+  it("combines lexical and semantic rankings with reciprocal rank fusion", () => {
+    const keywordScores = bm25Scores([
+      "general account documentation",
+      "invoice ZX-918 payment terms",
+      "unrelated deployment notes",
+    ], "ZX-918 invoice");
+    expect(keywordScores[1]).toBeGreaterThan(keywordScores[0]);
+
+    const fused = reciprocalRankFusion([
+      ["semantic", "both", "keyword"],
+      ["keyword", "both"],
+    ]);
+    expect(fused[0][0]).toBe("keyword");
+    expect(fused.map(([id]) => id)).toEqual(expect.arrayContaining(["semantic", "keyword", "both"]));
   });
 });

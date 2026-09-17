@@ -4,7 +4,7 @@ import { getProvider } from "@/server/ai/providers";
 import { fallbackChain, getModel, getProviderConfig } from "@/server/config/models";
 import { db } from "@/server/db";
 import { executeTool, toolDefinitions } from "@/server/tools";
-import { searchDocuments, type RetrievedChunk } from "@/server/rag";
+import { searchDocuments, type RetrievalMode, type RetrievedChunk } from "@/server/rag";
 
 export type ChatOptions = {
   conversationId: string;
@@ -13,6 +13,7 @@ export type ChatOptions = {
   collectionId?: string;
   topK: number;
   threshold: number;
+  retrievalMode: RetrievalMode;
   signal: AbortSignal;
 };
 
@@ -102,7 +103,11 @@ export async function* runChat(initialMessages: ChatMessage[], options: ChatOpti
     let groundingBlocked = false;
     if (options.collectionId) {
       const latestUserMessage = [...initialMessages].reverse().find((message) => message.role === "user")?.content ?? "";
-      const chunks = await searchDocuments(options.collectionId, latestUserMessage, { topK: options.topK, threshold: options.threshold });
+      const chunks = await searchDocuments(options.collectionId, latestUserMessage, {
+        topK: options.topK,
+        threshold: options.threshold,
+        mode: options.retrievalMode,
+      });
       yield { type: "retrieval", chunks };
       chunks.forEach((chunk) => citationChunks.set(chunk.id, chunk));
       if (!chunks.length) {
@@ -202,7 +207,7 @@ export async function* runChat(initialMessages: ChatMessage[], options: ChatOpti
         try {
           result = await executeTool(call.name, call.arguments, {
             collectionId: options.collectionId,
-            retrieval: { topK: options.topK, threshold: options.threshold },
+            retrieval: { topK: options.topK, threshold: options.threshold, mode: options.retrievalMode },
             signal: options.signal,
           });
         } catch (error) {

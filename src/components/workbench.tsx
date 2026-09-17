@@ -11,7 +11,8 @@ import type { ModelConfig, ProviderId, Usage } from "@/contracts/ai";
 type Conversation = { id: string; title: string; provider: ProviderId; model: string; updated_at?: string };
 type Message = { id: string; role: "user" | "assistant"; content: string };
 type Collection = { id: string; name: string; document_count: number; chunk_count: number };
-type RetrievedChunk = { id: string; documentName: string; content: string; score: number; chunkIndex: number };
+type RetrievalMode = "vector" | "hybrid";
+type RetrievedChunk = { id: string; documentName: string; content: string; score: number; chunkIndex: number; retrievalMode: RetrievalMode };
 type RequestMetric = {
   id: string; provider: string; model: string; started_at: string; first_token_ms: number | null; total_ms: number;
   input_tokens: number; output_tokens: number; cached_tokens: number; reasoning_tokens: number; cost_usd: number;
@@ -47,6 +48,7 @@ export function Workbench() {
   const [overlap, setOverlap] = useState(150);
   const [topK, setTopK] = useState(4);
   const [threshold, setThreshold] = useState(0.15);
+  const [retrievalMode, setRetrievalMode] = useState<RetrievalMode>("hybrid");
   const [uploading, setUploading] = useState(false);
   const [retrieved, setRetrieved] = useState<RetrievedChunk[]>([]);
   const [recentMetrics, setRecentMetrics] = useState<RequestMetric[]>([]);
@@ -146,7 +148,7 @@ export function Workbench() {
     try {
       const response = await fetch("/api/chat", {
         method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId: activeId, provider, model, message: content, collectionId: collectionId || undefined, topK, threshold }),
+        body: JSON.stringify({ conversationId: activeId, provider, model, message: content, collectionId: collectionId || undefined, topK, threshold, retrievalMode }),
       });
       if (!response.ok || !response.body) throw new Error((await response.json().catch(() => null))?.error ?? "Chat request failed");
       const reader = response.body.getReader();
@@ -276,8 +278,8 @@ export function Workbench() {
             <label className="control-label">Collection<select value={collectionId} onChange={(event) => setCollectionId(event.target.value)}><option value="">No collection</option>{collections.map((collection) => <option value={collection.id} key={collection.id}>{collection.name}</option>)}</select></label>
             {selectedCollection && <div className="collection-summary"><FileText size={16} /><span>{selectedCollection.document_count} files</span><span>{selectedCollection.chunk_count} chunks</span></div>}
           </section>
-          <section className="panel-section"><h2>Retrieval controls</h2><div className="control-grid"><label>Chunk size<input type="number" min="200" max="4000" step="100" value={chunkSize} onChange={(event) => setChunkSize(Number(event.target.value))} /></label><label>Overlap<input type="number" min="0" max="2000" step="25" value={overlap} onChange={(event) => setOverlap(Number(event.target.value))} /></label><label>Top K<input type="number" min="1" max="12" value={topK} onChange={(event) => setTopK(Number(event.target.value))} /></label><label>Threshold<input type="number" min="-1" max="1" step="0.05" value={threshold} onChange={(event) => setThreshold(Number(event.target.value))} /></label></div></section>
-          <section className="panel-section retrieved-section"><h2>Retrieved chunks <span>{retrieved.length}</span></h2>{!retrieved.length ? <p className="quiet-copy">Relevant source text will appear here after a document search.</p> : retrieved.map((chunk) => <article className="chunk" key={chunk.id}><header><span>{chunk.documentName} · #{chunk.chunkIndex + 1}</span><strong>{Math.round(chunk.score * 100)}%</strong></header><p>{chunk.content}</p><code>{chunk.id}</code></article>)}</section>
+          <section className="panel-section"><h2>Retrieval controls</h2><div className="mode-switch" role="group" aria-label="Retrieval mode"><button className={retrievalMode === "vector" ? "active" : ""} onClick={() => setRetrievalMode("vector")}>Vector</button><button className={retrievalMode === "hybrid" ? "active" : ""} onClick={() => setRetrievalMode("hybrid")}>Hybrid</button></div><div className="control-grid"><label>Chunk size<input type="number" min="200" max="4000" step="100" value={chunkSize} onChange={(event) => setChunkSize(Number(event.target.value))} /></label><label>Overlap<input type="number" min="0" max="2000" step="25" value={overlap} onChange={(event) => setOverlap(Number(event.target.value))} /></label><label>Top K<input type="number" min="1" max="12" value={topK} onChange={(event) => setTopK(Number(event.target.value))} /></label><label>Threshold<input type="number" min="-1" max="1" step="0.05" value={threshold} onChange={(event) => setThreshold(Number(event.target.value))} /></label></div></section>
+          <section className="panel-section retrieved-section"><h2>Retrieved chunks <span>{retrieved.length}</span></h2>{!retrieved.length ? <p className="quiet-copy">Relevant source text will appear here after a document search.</p> : retrieved.map((chunk) => <article className="chunk" key={chunk.id}><header><span>{chunk.documentName} · #{chunk.chunkIndex + 1}</span><strong>{chunk.retrievalMode === "hybrid" ? "Hybrid" : "Vector"} {Math.round(chunk.score * 100)}%</strong></header><p>{chunk.content}</p><code>{chunk.id}</code></article>)}</section>
         </div> : <div className="inspector-content">
           <section className="metric-summary"><div><Gauge size={16} /><span>Last request</span><strong>{liveMetric ? `${liveMetric.totalMs} ms` : "--"}</strong></div><div><Activity size={16} /><span>First token</span><strong>{liveMetric?.firstTokenMs != null ? `${liveMetric.firstTokenMs} ms` : "--"}</strong></div><div><Wrench size={16} /><span>Retries</span><strong>{liveMetric?.retries ?? 0}</strong></div><div><span className="dollar">$</span><span>Cost</span><strong>{liveMetric ? `$${liveMetric.costUsd.toFixed(6)}` : "--"}</strong></div></section>
           <section className="panel-section"><h2>Provider totals</h2><div className="provider-table">{aggregateMetrics.length ? aggregateMetrics.map((row) => <div key={row.provider}><strong>{providerLabel(row.provider)}</strong><span>{row.requests} req</span><span>{row.average_latency_ms ?? 0} ms</span><span>${Number(row.spend ?? 0).toFixed(4)}</span></div>) : <p className="quiet-copy">No completed requests yet.</p>}</div></section>

@@ -28,6 +28,14 @@ npm run lint
 npm run build
 ```
 
+Or run the complete application in Docker:
+
+```powershell
+docker compose up --build
+```
+
+Compose exposes `http://localhost:3000`, runs as a non-root user, checks `/api/config`, and stores SQLite data in the named `polyglot-data` volume. Provider keys can be supplied through the shell environment or a local `.env` file used by Docker Compose.
+
 ## Status
 
 | Area | Status | Notes |
@@ -37,7 +45,7 @@ npm run build
 | OpenAI adapter | Done | Chat Completions SSE; function argument deltas; usage |
 | Streaming chat | Done | True upstream SSE; browser cancellation aborts provider fetch |
 | Persistence | Done | SQLite conversations, messages, requests, collections, chunks |
-| RAG | Done | PDF/TXT/Markdown; multi-file collections; inline chunk IDs and inspector |
+| RAG | Done | PDF/TXT/Markdown; vector or BM25+vector hybrid retrieval; inline chunk IDs and inspector |
 | Tool calling | Done | Calculator, Open-Meteo weather, document search; six-round loop |
 | Resilience | Done | Timeouts; retry with backoff/jitter; configurable provider fallback |
 | Observability | Done | TTFT, latency, token categories, configured cost, retries, fallback |
@@ -45,7 +53,7 @@ npm run build
 | Live provider verification | Needs keys | Adapters are fixture-tested; add keys to verify the current account/model access |
 | Demo video | Not recorded | Use `docs/DEMO_SCRIPT.md` for a 5-8 minute walkthrough |
 | Side-by-side comparison | Not done | Optional; intentionally left out to keep the core easy to repair |
-| Docker Compose | Not done | Optional; local Node + SQLite setup is already one process |
+| Docker Compose | Done | Multi-stage non-root image, health check, persistent SQLite volume |
 
 ## Structure
 
@@ -55,7 +63,7 @@ src/server/ai/providers/         one adapter file per provider
 src/server/config/models.ts      provider catalog, models, capabilities, prices
 src/server/ai/orchestrator.ts    retry, fallback, streaming, and tool loop
 src/server/tools.ts              three normalized tools
-src/server/rag.ts                chunking and similarity search
+src/server/rag.ts                chunking, vector search, BM25, and rank fusion
 src/server/db.ts                 SQLite schema and connection
 src/app/api/                     thin HTTP/SSE route handlers
 src/components/workbench.tsx     single-screen UI
@@ -69,7 +77,7 @@ The assignment referenced a seed-repository contract, but no seed repository was
 
 Models, context windows, capabilities, prices, and fallback order live in `src/server/config/models.ts`. Prices were checked against official provider pages on 2026-09-17 and should be reviewed before production use.
 
-The default `EMBEDDING_PROVIDER=local` is a deterministic hashed bag-of-words embedding that makes the project run without another paid API. Set it to `openai` or `gemini` to use a hosted embedding adapter. SQLite stores vectors as JSON and computes cosine similarity in-process; this is transparent and adequate for a take-home dataset, but not for a large corpus. A selected collection is a grounded mode: retrieval runs before generation, the UI receives the matched chunks, citations use exact chunk IDs, and no match returns exactly `I don't know.` without calling a model.
+The default `EMBEDDING_PROVIDER=local` is a deterministic hashed bag-of-words embedding that makes the project run without another paid API. Set it to `openai` or `gemini` to use a hosted embedding adapter. SQLite stores vectors as JSON and computes cosine similarity in-process; this is transparent and adequate for a take-home dataset, but not for a large corpus. Retrieval can use vector similarity alone or hybrid mode, which combines vector and BM25 rankings with reciprocal-rank fusion. A selected collection is a grounded mode: retrieval runs before generation, the UI receives the matched chunks, citations use exact chunk IDs, and no match returns exactly `I don't know.` without calling a model.
 
 ## Documents
 

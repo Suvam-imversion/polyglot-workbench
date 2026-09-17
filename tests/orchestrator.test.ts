@@ -34,6 +34,7 @@ async function collect(options: { collectionId?: string } = {}) {
     model: "claude-sonnet-5",
     topK: 4,
     threshold: 0.15,
+    retrievalMode: "hybrid",
     signal: new AbortController().signal,
     ...options,
   })) events.push(event);

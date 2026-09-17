@@ -14,6 +14,7 @@ const inputSchema = z.object({
   collectionId: z.string().uuid().optional(),
   topK: z.number().int().min(1).max(12).default(4),
   threshold: z.number().min(-1).max(1).default(0.15),
+  retrievalMode: z.enum(["vector", "hybrid"]).default("hybrid"),
 });
 
 export async function POST(request: Request) {

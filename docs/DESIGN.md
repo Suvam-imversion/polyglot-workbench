@@ -13,7 +13,9 @@ flowchart LR
   REG --> O[OpenAI adapter]
   ORCH --> TOOLS[Tool registry]
   TOOLS --> WEATHER[Open-Meteo]
-  TOOLS --> RAG[RAG search]
+  TOOLS --> RAG[Hybrid RAG search]
+  RAG --> VECTOR[Vector ranking]
+  RAG --> BM25[BM25 ranking]
   RAG --> DB
   UPLOAD[Upload route] --> EMBED[Embedding adapter]
   EMBED --> DB
@@ -37,12 +39,13 @@ flowchart LR
 1. **One Next.js process.** UI, routes, and server modules share TypeScript types and one development command. This is easier to debug live than separate frontend/backend services.
 2. **Plain fetch adapters.** Official HTTP surfaces are visible in code; there is no provider abstraction framework hiding behavior.
 3. **SQLite without an ORM.** The schema is small and direct SQL makes persistence easy to explain. WAL mode improves local concurrency.
-4. **Small-scale vector search.** JSON vectors plus cosine similarity avoid a second service. Replace the implementation behind `searchDocuments` for production scale.
+4. **Hybrid retrieval.** Vector similarity catches semantic matches while BM25 catches identifiers and exact terms. Reciprocal-rank fusion combines ranks without trying to calibrate unlike score scales. JSON vectors and in-process BM25 avoid another service; replace both behind `searchDocuments` for production scale.
 5. **Swappable embeddings.** Local, OpenAI, and Gemini implement one interface. Local is the zero-key default.
 6. **SSE end to end.** The browser reads actual provider deltas. Its `AbortController` reaches the upstream fetch through the route signal.
 7. **Bounded agent loop.** Six rounds prevent runaway spend while allowing sequential and multiple tool calls.
 8. **Conservative context policy.** Estimate tokens at four characters each, reserve 15% for output, apply a configurable input ceiling, retain system messages, and remove oldest turns first.
 9. **Strict grounded mode.** Selecting a collection retrieves before generation. Empty retrieval returns exactly `I don't know.`; successful retrieval emits chunks to the inspector and guarantees exact chunk-ID citations.
+10. **Reproducible container.** A multi-stage image copies only the standalone Next.js runtime and assets. It runs as an unprivileged user, has a health check, and persists SQLite in a named volume.
 
 ## Security posture
 
@@ -62,8 +65,8 @@ Known gaps and production additions:
 - Virus-scan uploads, sandbox PDF parsing, and add OCR separately.
 - Encrypt sensitive data at rest and use a managed secret store.
 - Use exact provider token counters before requests and account-level budget enforcement.
-- Add audit logs, distributed tracing, durable jobs, and a production vector database.
+- Add audit logs, distributed tracing, durable jobs, and a production hybrid-search service.
 
 ## With more time
 
-I would first add integration tests against provider sandboxes with recorded fixtures and exact token counting. Second, I would replace local retrieval with hybrid semantic/BM25 search plus a small grounded-answer evaluation set.
+I would first add integration tests against provider sandboxes with recorded fixtures and exact token counting. Second, I would add a small grounded-answer evaluation set and tune hybrid retrieval against it.
