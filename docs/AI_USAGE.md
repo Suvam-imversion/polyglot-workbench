@@ -2,9 +2,9 @@
 
 ## Tools and scope
 
-I used ChatGPT as a coding assistant for requirements breakdown, implementation drafts, provider-documentation research, test-case design, and documentation editing. I used terminal automation to run tests, linting, type checking, production builds, dependency audits, Docker builds, API smoke tests, and live Gemini and Groq verification.
+I used OpenAI Codex throughout development as an implementation and review assistant. Its most substantial contribution was in several complex areas: translating provider-specific streaming and tool-call protocols into the shared adapter contract, reviewing the retry/fallback/tool-loop orchestration, and building the deterministic hybrid-retrieval evaluation. I also used it to research provider documentation, draft focused tests, assist with UI and documentation changes, and automate validation commands.
 
-AI assistance was used across the provider adapters, streaming orchestrator, tool loop, RAG pipeline, responsive interface, Docker setup, and Markdown documentation. I reviewed the resulting code against the assignment and kept the implementation deliberately small enough to explain and modify during a live session.
+I made the architecture and scope decisions, reviewed the generated changes line by line, corrected behavior against live API responses, and kept the implementation small enough to explain and modify during a live session. Codex assisted with implementation and review; it was not treated as an authority on provider behavior or as a substitute for testing.
 
 ## Corrections and rejected suggestions
 
