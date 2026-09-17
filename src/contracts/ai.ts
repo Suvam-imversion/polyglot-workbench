@@ -13,6 +13,7 @@ export type ToolCall = {
   id: string;
   name: string;
   arguments: string;
+  providerMetadata?: Record<string, unknown>;
 };
 
 export type ChatMessage = {
@@ -45,7 +46,7 @@ export type ProviderRequest = {
 
 export type ProviderEvent =
   | { type: "text_delta"; text: string }
-  | { type: "tool_call_delta"; id: string; name?: string; arguments: string }
+  | { type: "tool_call_delta"; id: string; name?: string; arguments: string; providerMetadata?: Record<string, unknown> }
   | { type: "usage"; usage: Usage }
   | { type: "done"; finishReason: string };
 

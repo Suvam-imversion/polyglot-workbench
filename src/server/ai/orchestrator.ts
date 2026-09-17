@@ -174,8 +174,9 @@ export async function* runChat(initialMessages: ChatMessage[], options: ChatOpti
                 const current = calls.get(event.id) ?? { id: event.id, name: event.name ?? "", arguments: "" };
                 current.name ||= event.name ?? "";
                 current.arguments += event.arguments;
+                current.providerMetadata ??= event.providerMetadata;
                 calls.set(event.id, current);
-                yield { type: "tool", ...current, status: "calling" };
+                yield { type: "tool", id: current.id, name: current.name, arguments: current.arguments, status: "calling" };
               }
               if (event.type === "usage") mergeUsage(roundUsage, event.usage);
               if (event.type === "done") finishReason = event.finishReason;
@@ -218,7 +219,7 @@ export async function* runChat(initialMessages: ChatMessage[], options: ChatOpti
         if (call.name === "search_documents" && result && typeof result === "object" && "chunks" in result && Array.isArray(result.chunks)) {
           (result.chunks as RetrievedChunk[]).forEach((chunk) => citationChunks.set(chunk.id, chunk));
         }
-        yield { type: "tool", ...call, status: "complete", result };
+        yield { type: "tool", id: call.id, name: call.name, arguments: call.arguments, status: "complete", result };
       }
     }
 

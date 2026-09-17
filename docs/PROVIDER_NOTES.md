@@ -18,7 +18,7 @@
 
 Anthropic removes system messages from the turn list, enables fine-grained tool input streaming, and reconstructs assistant tool blocks plus user tool-result blocks for follow-up rounds.
 
-Gemini maps assistant turns to `model`, wraps content in `parts`, and includes call IDs/names in function responses. Thinking tokens map to normalized reasoning tokens.
+Gemini maps assistant turns to `model`, wraps content in `parts`, and carries tool correlation through `id`; the OpenAI-only `call_id` alias is not sent. Gemini 3.x thought signatures are retained as opaque provider metadata and returned unchanged on the next tool round, but never exposed to the browser or tool executor. Local tool JSON is restored to a structured `functionResponse.response`. Gemini function declarations accept only a subset of JSON Schema, so unsupported `additionalProperties` fields are removed recursively at the adapter boundary. Thinking tokens map to normalized reasoning tokens.
 
 OpenAI and Groq use Chat Completions because the assignment permits it and the shared delta format makes translation compact. They remain separate adapters and configuration entries with isolated endpoints and environment variables. Tool-call IDs are remembered by array index because later argument fragments may omit the ID.
 

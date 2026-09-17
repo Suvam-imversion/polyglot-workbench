@@ -23,9 +23,9 @@ function sse(frames: Array<{ event?: string; data: unknown }>) {
   return new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } });
 }
 
-async function collect(provider: Pick<AiProvider, "stream">) {
+async function collect(provider: Pick<AiProvider, "stream">, providerRequest = request) {
   const events = [];
-  for await (const event of provider.stream(request, new AbortController().signal)) events.push(event);
+  for await (const event of provider.stream(providerRequest, new AbortController().signal)) events.push(event);
   return events;
 }
 
@@ -87,7 +87,7 @@ describe("provider adapters", () => {
   it("translates Gemini roles, systemInstruction, and function calls", async () => {
     const fetchMock = vi.fn().mockResolvedValue(sse([
       { data: {
-        candidates: [{ content: { parts: [{ text: "Using a tool." }, { functionCall: { id: "gem-1", name: "calculator", args: { expression: "2+2" } } }] }, finishReason: "STOP" }],
+        candidates: [{ content: { parts: [{ text: "Using a tool." }, { functionCall: { id: "gem-1", name: "calculator", args: { expression: "2+2" } }, thoughtSignature: "fixture-signature" }] }, finishReason: "STOP" }],
         usageMetadata: { promptTokenCount: 11, candidatesTokenCount: 6, thoughtsTokenCount: 2 },
       } },
     ]));
@@ -98,6 +98,25 @@ describe("provider adapters", () => {
     expect(body.systemInstruction.parts[0].text).toBe("Be concise.");
     expect(body.contents[0]).toEqual({ role: "user", parts: [{ text: "Calculate 2 + 2" }] });
     expect(body.tools[0].functionDeclarations[0].name).toBe("calculator");
-    expect(events).toContainEqual({ type: "tool_call_delta", id: "gem-1", name: "calculator", arguments: "{\"expression\":\"2+2\"}" });
+    expect(body.tools[0].functionDeclarations[0].parameters).not.toHaveProperty("additionalProperties");
+    expect(events).toContainEqual({ type: "tool_call_delta", id: "gem-1", name: "calculator", arguments: "{\"expression\":\"2+2\"}", providerMetadata: { thoughtSignature: "fixture-signature" } });
+  });
+
+  it("translates Gemini tool history without OpenAI-only call_id fields", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(sse([{ data: { candidates: [{ content: { parts: [{ text: "4" }] }, finishReason: "STOP" }] } }]));
+    vi.stubGlobal("fetch", fetchMock);
+    const toolRequest: ProviderRequest = {
+      ...request,
+      messages: [
+        { role: "user", content: "Calculate 2 + 2" },
+        { role: "assistant", content: "", toolCalls: [{ id: "gem-1", name: "calculator", arguments: "{\"expression\":\"2+2\"}", providerMetadata: { thoughtSignature: "fixture-signature" } }] },
+        { role: "tool", content: "{\"result\":4}", toolCallId: "gem-1", toolName: "calculator" },
+      ],
+    };
+
+    await collect(new GeminiProvider(), toolRequest);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.contents[1].parts[0]).toEqual({ functionCall: { id: "gem-1", name: "calculator", args: { expression: "2+2" } }, thoughtSignature: "fixture-signature" });
+    expect(body.contents[2].parts[0].functionResponse).toEqual({ id: "gem-1", name: "calculator", response: { result: 4 } });
   });
 });

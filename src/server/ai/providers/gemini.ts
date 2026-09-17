@@ -2,6 +2,23 @@ import type { AiProvider, ChatMessage, ProviderEvent, ProviderRequest } from "@/
 import { normalizeHttpError, normalizeStreamError, providerFetch } from "@/server/ai/errors";
 import { parseSse } from "@/server/ai/sse";
 
+function toGeminiSchema(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(toGeminiSchema);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value).filter(([key]) => key !== "additionalProperties").map(([key, item]) => [key, toGeminiSchema(item)]),
+  );
+}
+
+function toolResponse(content: string) {
+  try {
+    const parsed: unknown = JSON.parse(content);
+    return parsed && typeof parsed === "object" ? parsed : { result: parsed };
+  } catch {
+    return { result: content };
+  }
+}
+
 function toContents(messages: ChatMessage[]) {
   return messages
     .filter((message) => message.role !== "system")
@@ -12,9 +29,8 @@ function toContents(messages: ChatMessage[]) {
           parts: [{
             functionResponse: {
               id: message.toolCallId,
-              call_id: message.toolCallId,
               name: message.toolName,
-              response: { result: message.content },
+              response: toolResponse(message.content),
             },
           }],
         };
@@ -27,10 +43,12 @@ function toContents(messages: ChatMessage[]) {
             ...message.toolCalls.map((call) => ({
               functionCall: {
                 id: call.id,
-                call_id: call.id,
                 name: call.name,
                 args: JSON.parse(call.arguments || "{}"),
               },
+              ...(typeof call.providerMetadata?.thoughtSignature === "string"
+                ? { thoughtSignature: call.providerMetadata.thoughtSignature }
+                : {}),
             })),
           ],
         };
@@ -58,7 +76,7 @@ export class GeminiProvider implements AiProvider {
               functionDeclarations: request.tools.map((tool) => ({
                 name: tool.name,
                 description: tool.description,
-                parameters: tool.inputSchema,
+                parameters: toGeminiSchema(tool.inputSchema),
               })),
             }]
           : undefined,
@@ -86,6 +104,9 @@ export class GeminiProvider implements AiProvider {
             id,
             name: part.functionCall.name,
             arguments: JSON.stringify(part.functionCall.args ?? {}),
+            providerMetadata: typeof part.thoughtSignature === "string"
+              ? { thoughtSignature: part.thoughtSignature }
+              : undefined,
           };
         }
       }
