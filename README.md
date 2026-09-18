@@ -57,8 +57,6 @@ Compose exposes `http://localhost:3000`, runs as a non-root user, checks `/api/c
 | Observability | Done | TTFT, latency, token categories, configured cost, retries, fallback, and sanitized failed-request records |
 | Automated tests | Done | Mocked streaming fixtures for all four adapters plus a three-query retrieval evaluation |
 | Live provider verification | Partial | Gemini and Groq text streaming and complete calculator tool rounds were tested live; Anthropic and OpenAI use mocked streaming fixtures |
-| Demo video | Not recorded | Use `docs/DEMO_SCRIPT.md` for a 5-8 minute walkthrough |
-| Side-by-side comparison | Not done | Optional; intentionally left out to keep the submission focused |
 | Docker Compose | Done | Multi-stage non-root image, health check, persistent SQLite volume |
 
 ## Structure
@@ -92,7 +90,6 @@ The default `EMBEDDING_PROVIDER=local` is a deterministic hashed bag-of-words em
 - [Design](docs/DESIGN.md)
 - [Provider notes](docs/PROVIDER_NOTES.md)
 - [AI usage](docs/AI_USAGE.md)
-- [Demo script](docs/DEMO_SCRIPT.md)
 
 ## Known limitations
 
