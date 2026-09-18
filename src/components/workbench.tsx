@@ -124,7 +124,9 @@ export function Workbench() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => bottomRef.current?.scrollIntoView({ behavior: streaming ? "instant" : "smooth" }), [messages, streaming]);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: streaming ? "instant" : "smooth" });
+  }, [messages, streaming]);
 
   async function deleteConversation(id: string) {
     await fetch(`/api/conversations/${id}`, { method: "DELETE" });
