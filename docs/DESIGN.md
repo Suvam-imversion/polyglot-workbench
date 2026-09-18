@@ -45,7 +45,7 @@ No route, orchestrator, persistence, metrics, or UI branching is required. OpenA
 
 ## Decisions
 
-1. **One Next.js process.** UI, routes, and server modules share TypeScript types and one development command. This is easier to debug live than separate frontend/backend services.
+1. **One Next.js process.** UI, routes, and server modules share TypeScript types and one development command. This keeps local development and deployment straightforward.
 2. **Plain fetch adapters.** Official HTTP surfaces are visible in code; there is no provider abstraction framework hiding behavior.
 3. **SQLite without an ORM.** The schema is small and direct SQL makes persistence easy to explain. WAL mode improves local concurrency.
 4. **Hybrid retrieval.** Vector similarity catches semantic matches while BM25 catches identifiers and exact terms. Reciprocal-rank fusion combines ranks without trying to calibrate unlike score scales. JSON vectors and in-process BM25 avoid another service; replace both behind `searchDocuments` for production scale.

@@ -4,7 +4,7 @@
 
 I used OpenAI Codex throughout development as an implementation and review assistant. Its most substantial contribution was in several complex areas: translating provider-specific streaming and tool-call protocols into the shared adapter contract, reviewing the retry/fallback/tool-loop orchestration, and building the deterministic hybrid-retrieval evaluation. I also used it to research provider documentation, draft focused tests, assist with UI and documentation changes, and automate validation commands.
 
-I made the architecture and scope decisions, reviewed the generated changes line by line, corrected behavior against live API responses, and kept the implementation small enough to explain and modify during a live session. Codex assisted with implementation and review; it was not treated as an authority on provider behavior or as a substitute for testing.
+I made the architecture and scope decisions, reviewed the generated changes, corrected behavior against live API responses, and kept the implementation focused and understandable. Codex assisted with implementation and review; it was not treated as an authority on provider behavior or as a substitute for testing.
 
 ## Corrections and rejected suggestions
 

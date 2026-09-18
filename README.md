@@ -58,7 +58,7 @@ Compose exposes `http://localhost:3000`, runs as a non-root user, checks `/api/c
 | Automated tests | Done | Mocked streaming fixtures for all four adapters plus a three-query retrieval evaluation |
 | Live provider verification | Partial | Gemini and Groq text streaming and complete calculator tool rounds were tested live; Anthropic and OpenAI use mocked streaming fixtures |
 | Demo video | Not recorded | Use `docs/DEMO_SCRIPT.md` for a 5-8 minute walkthrough |
-| Side-by-side comparison | Not done | Optional; intentionally left out to keep the core easy to repair |
+| Side-by-side comparison | Not done | Optional; intentionally left out to keep the submission focused |
 | Docker Compose | Done | Multi-stage non-root image, health check, persistent SQLite volume |
 
 ## Structure
