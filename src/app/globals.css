@@ -19,8 +19,8 @@ body { margin: 0; background: var(--canvas); color: var(--ink); font-family: Ari
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 
-.workbench-shell { display: grid; grid-template-columns: 248px minmax(0, 1fr) 342px; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
-.conversation-rail { background: var(--rail); color: #eef2ef; display: flex; flex-direction: column; min-width: 0; border-right: 1px solid #343b38; }
+.workbench-shell { display: grid; grid-template-columns: 248px minmax(0, 1fr) 342px; grid-template-rows: minmax(0, 1fr); height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+.conversation-rail { height: 100%; min-height: 0; overflow: hidden; background: var(--rail); color: #eef2ef; display: flex; flex-direction: column; min-width: 0; border-right: 1px solid #343b38; }
 .brand-row { height: 68px; display: flex; align-items: center; gap: 10px; padding: 0 16px; border-bottom: 1px solid #343b38; }
 .brand-mark { width: 32px; height: 32px; display: grid; place-items: center; background: #dcefe8; color: #126c58; border-radius: 6px; }
 .brand-row strong, .brand-row span { display: block; }
@@ -102,11 +102,11 @@ button { cursor: pointer; }
 .send-button:disabled { background: #bec7c3; cursor: default; }
 .send-button.stop { background: var(--danger); }
 
-.inspector { background: #f7f8f6; border-left: 1px solid var(--line); min-width: 0; display: grid; grid-template-rows: 52px minmax(0, 1fr); }
+.inspector { height: 100%; min-height: 0; overflow: hidden; background: #f7f8f6; border-left: 1px solid var(--line); min-width: 0; display: grid; grid-template-rows: 52px minmax(0, 1fr); }
 .inspector-tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); }
 .inspector-tabs button { display: flex; align-items: center; justify-content: center; gap: 7px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-size: 11px; }
 .inspector-tabs button.active { color: var(--ink); border-bottom-color: var(--accent); }
-.inspector-content { overflow: auto; }
+.inspector-content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .panel-section { padding: 18px; border-bottom: 1px solid var(--line); }
 .panel-section h2 { margin: 0 0 12px; font-size: 12px; font-weight: 700; }
 .section-heading { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
