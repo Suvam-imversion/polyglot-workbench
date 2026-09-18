@@ -55,7 +55,9 @@ export function Workbench() {
   const [aggregateMetrics, setAggregateMetrics] = useState<AggregateMetric[]>([]);
   const [liveMetric, setLiveMetric] = useState<StreamMetric | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const messageScrollRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const stickToBottomRef = useRef(true);
   const initializedRef = useRef(false);
 
   const availableModels = useMemo(() => models.filter((item) => item.provider === provider), [models, provider]);
@@ -95,6 +97,7 @@ export function Workbench() {
 
   const loadConversation = useCallback(async (id: string) => {
     const data = await json<{ conversation: Conversation; messages: Message[] }>(`/api/conversations/${id}`);
+    stickToBottomRef.current = true;
     setActiveId(id);
     setMessages(data.messages);
     setProvider(data.conversation.provider);
@@ -125,7 +128,9 @@ export function Workbench() {
   }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: streaming ? "instant" : "smooth" });
+    if (stickToBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: streaming ? "instant" : "smooth" });
+    }
   }, [messages, streaming]);
 
   async function deleteConversation(id: string) {
@@ -141,6 +146,7 @@ export function Workbench() {
   async function sendMessage() {
     const content = input.trim();
     if (!content || !activeId || streaming || !model) return;
+    stickToBottomRef.current = true;
     setInput(""); setRetrieved([]); setLiveMetric(null);
     setMessages((current) => [...current, { id: crypto.randomUUID(), role: "user", content }, { id: "stream", role: "assistant", content: "" }]);
     setStreaming(true); setStatus("Connecting");
@@ -252,7 +258,14 @@ export function Workbench() {
           <button className="icon-button" onClick={() => setInspectorOpen((current) => !current)} title={inspectorOpen ? "Close inspector" : "Open inspector"}>{inspectorOpen ? <PanelRightClose size={19} /> : <PanelRightOpen size={19} />}</button>
         </header>
 
-        <div className="message-scroll">
+        <div
+          className="message-scroll"
+          ref={messageScrollRef}
+          onScroll={() => {
+            const element = messageScrollRef.current;
+            if (element) stickToBottomRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
+          }}
+        >
           {!messages.length ? (
             <div className="empty-state">
               <Bot size={26} /><h1>What are we working on?</h1><p>Choose a provider, attach reference documents if needed, and start a conversation.</p>
