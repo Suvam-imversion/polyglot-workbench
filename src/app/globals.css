@@ -64,10 +64,13 @@ button { cursor: pointer; }
   overflow-y: scroll;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
-  scrollbar-color: #aeb8b3 transparent;
+  scrollbar-color: #9ca8a2 #f3f5f3;
   scrollbar-width: thin;
   touch-action: pan-y;
 }
+.message-scroll::-webkit-scrollbar { width: 10px; }
+.message-scroll::-webkit-scrollbar-track { background: #f3f5f3; }
+.message-scroll::-webkit-scrollbar-thumb { background: #9ca8a2; border: 2px solid #f3f5f3; border-radius: 5px; }
 .empty-state { height: 100%; max-width: 680px; margin: auto; padding: 80px 36px 40px; display: flex; flex-direction: column; align-items: center; text-align: center; }
 .empty-state > svg { color: var(--accent); margin-bottom: 18px; }
 .empty-state h1 { margin: 0; font-size: 25px; line-height: 1.2; font-weight: 650; }
