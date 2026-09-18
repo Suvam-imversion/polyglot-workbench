@@ -1,13 +1,13 @@
-# Polyglot AI Workbench
+# Polyglot Workbench
 
 A small full-stack workbench for streaming chat across Anthropic, Gemini, Groq, and OpenAI, with RAG, normalized tools, persistence, fallbacks, and request-level cost/latency metrics.
 
-## Setup (under 5 minutes)
+## Setup
 
-Requirements: Git, Node.js 22+, and at least one provider API key. Set the repository URL from the submission email, then run:
+Requirements: Git, Node.js 22+, and at least one provider API key. Run:
 
 ```powershell
-$RepositoryUrl = "https://github.com/OWNER/REPOSITORY.git"
+$RepositoryUrl = "https://github.com/Suvam-imversion/polyglot-workbench.git"
 git clone $RepositoryUrl polyglot-ai-workbench
 Set-Location polyglot-ai-workbench
 npm ci
