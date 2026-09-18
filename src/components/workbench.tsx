@@ -56,8 +56,6 @@ export function Workbench() {
   const [liveMetric, setLiveMetric] = useState<StreamMetric | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const messageScrollRef = useRef<HTMLDivElement | null>(null);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
-  const stickToBottomRef = useRef(true);
   const initializedRef = useRef(false);
 
   const availableModels = useMemo(() => models.filter((item) => item.provider === provider), [models, provider]);
@@ -97,13 +95,16 @@ export function Workbench() {
 
   const loadConversation = useCallback(async (id: string) => {
     const data = await json<{ conversation: Conversation; messages: Message[] }>(`/api/conversations/${id}`);
-    stickToBottomRef.current = true;
     setActiveId(id);
     setMessages(data.messages);
     setProvider(data.conversation.provider);
     setModel(data.conversation.model);
     setRetrieved([]);
     setMobileNav(false);
+    requestAnimationFrame(() => {
+      const element = messageScrollRef.current;
+      if (element) element.scrollTop = element.scrollHeight;
+    });
   }, []);
 
   useEffect(() => {
@@ -127,12 +128,6 @@ export function Workbench() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (stickToBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: streaming ? "instant" : "smooth" });
-    }
-  }, [messages, streaming]);
-
   async function deleteConversation(id: string) {
     await fetch(`/api/conversations/${id}`, { method: "DELETE" });
     const remaining = conversations.filter((item) => item.id !== id);
@@ -146,9 +141,12 @@ export function Workbench() {
   async function sendMessage() {
     const content = input.trim();
     if (!content || !activeId || streaming || !model) return;
-    stickToBottomRef.current = true;
     setInput(""); setRetrieved([]); setLiveMetric(null);
     setMessages((current) => [...current, { id: crypto.randomUUID(), role: "user", content }, { id: "stream", role: "assistant", content: "" }]);
+    requestAnimationFrame(() => {
+      const element = messageScrollRef.current;
+      if (element) element.scrollTop = element.scrollHeight;
+    });
     setStreaming(true); setStatus("Connecting");
     const controller = new AbortController();
     abortRef.current = controller;
@@ -261,10 +259,6 @@ export function Workbench() {
         <div
           className="message-scroll"
           ref={messageScrollRef}
-          onScroll={() => {
-            const element = messageScrollRef.current;
-            if (element) stickToBottomRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
-          }}
         >
           {!messages.length ? (
             <div className="empty-state">
@@ -275,7 +269,6 @@ export function Workbench() {
             <div className="message-list">
               {messages.map((message) => <article className={`message ${message.role}`} key={message.id}><div className="message-author">{message.role === "user" ? "You" : providerLabel(provider)}</div><div className="message-body"><ReactMarkdown>{message.content || "..."}</ReactMarkdown></div></article>)}
               {retrieved.length > 0 && <div className="citation-strip"><BookOpen size={15} /> Retrieved {retrieved.length} supporting chunks. Open Documents to inspect them.</div>}
-              <div ref={bottomRef} />
             </div>
           )}
         </div>
