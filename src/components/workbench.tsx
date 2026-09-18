@@ -73,7 +73,7 @@ export function Workbench() {
   const refreshCollections = useCallback(async () => {
     const data = await json<{ collections: Collection[] }>("/api/documents");
     setCollections(data.collections);
-    if (!collectionId && data.collections[0]) setCollectionId(data.collections[0].id);
+    if (collectionId && !data.collections.some((collection) => collection.id === collectionId)) setCollectionId("");
   }, [collectionId]);
 
   const refreshMetrics = useCallback(async () => {

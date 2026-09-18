@@ -27,7 +27,7 @@ All non-2xx responses map to one of: `auth`, `rate_limit`, `context_length`, `co
 ## Current configuration
 
 - Anthropic: `claude-sonnet-5`, 1M context, $2/$10 per million input/output tokens.
-- Gemini: `gemini-3.8-flash`, 1,048,576 input limit, introductory $0.75/$3.75 pricing through 2026-12-31.
+- Gemini: `gemini-3.6-flash`, 1,048,576 input limit, introductory $0.75/$3.75 pricing through 2026-12-31.
 - Groq: `openai/gpt-oss-20b`, 131,072 context, $0.075/$0.30 per million input/output tokens.
 - OpenAI: `gpt-5.6-sol`, 1.05M context, promotional $4/$20 pricing as of 2026-09-17.
 

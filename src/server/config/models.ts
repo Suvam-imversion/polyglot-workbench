@@ -41,8 +41,8 @@ export const providerCatalog: ProviderConfig[] = [
     fallbacks: ["groq", "anthropic", "openai"],
     loadAdapter: () => import("@/server/ai/providers/gemini").then(({ GeminiProvider }) => new GeminiProvider()),
     models: [{
-      id: "gemini-3.8-flash",
-      label: "Gemini 3.8 Flash",
+      id: "gemini-3.6-flash",
+      label: "Gemini 3.6 Flash",
       contextWindow: 1_048_576,
       maxOutputTokens: 65_536,
       supportsTools: true,
